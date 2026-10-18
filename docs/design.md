@@ -100,8 +100,10 @@ The executor is data-oriented and incremental:
   to a fixed point, bounded by a named error (a cycle the checker missed cannot hang the host).
 - **No allocation per step.** Instance state is structs of arrays indexed by distinct ids (aegis), the candidates a
   reused bitset, the output written into a caller's buffer.
-- **Time comes from tide.** A condition over a clock or calendar fact is registered with tide's scheduler, which
-  wakes it only when its moment comes, so time passing costs nothing for the quests it does not decide.
+- **Time passing costs nothing.** A comparison against a `(clock)` fact (one the host only advances) is indexed
+  by the value at which it flips, in a heap per clock, not by the fact changing; a clock moving wakes only the
+  conditions whose moment has come, so a real-time game pays nothing per tick for its thousand timed quests. Facts
+  derived from a clock that change rarely (a day, a slot) are ordinary facts.
 - **Budgets.** A host may bound conditions evaluated per step and carry the rest to the next, for frame budgets; the
   result is the same as an unbounded step taken later.
 - **Determinism.** No clock (time is a fact the host sets), no randomness, a fixed evaluation order (by id), so a
@@ -151,8 +153,8 @@ A game that runs quests links `run` beside riverrun's `run`; the checker and com
   validated by its owner's reader.
 - **A `ref` fact type:** an opaque 64-bit handle the host owns, declared with a kind (`ref of person`), compared and
   stored, never inspected. Any engine's entities, items and places reach stories through it.
-- **`(clock)` facts:** an int the host only advances, which the checker and the evaluator may treat as monotonic;
-  tide keeps them and their calendar.
+- **`(clock)` facts:** an int the host only advances, which the checker and the evaluator may treat as monotonic.
+  Who advances them is the host's choice; tide is one.
 - The change stamps and `Watcher` it already has.
 
 ## Packages
@@ -160,7 +162,6 @@ A game that runs quests links `run` beside riverrun's `run`; the checker and com
 | package | for |
 |---|---|
 | riverrun | the language, the checker, the compiled format, facts, the evaluator |
-| tide | game time: clocks, the calendar, and the scheduler that wakes timed conditions |
 | aegis | distinct ids for quests, stages, instances and roles; bounds as named errors |
 | strand | the JSON dump of the quest graph and of a playthrough's timeline |
 | shakedown | deterministic tests and replays |
@@ -183,7 +184,8 @@ instances are many stores' thousands.
 
 ## Shapes it serves
 
-- **A calendar game** (Persona's kind). The date and time slot are tide's calendar facts; a deadline is a failure
+- **A calendar game** (Persona's kind). The date and time slot are facts of the game's calendar (tide's, or the
+  host's own); a deadline is a failure
   (`fails when { day > may_5 and not heart_stolen }`); a bond's ranks are stages over its points and the free slots,
   each rank's scene a riverrun section; requests are repeatable quests. What the day offers is the active set.
 - **A story-driven role-playing game** (a JRPG's main line and side quests, or one of many endings). Chapters are
