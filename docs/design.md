@@ -123,6 +123,37 @@ The executor is data-oriented and incremental:
 A step returns what happened: stages reached, quests started, ended and failed, effects to apply, and the active set's
 changes (keys added and removed), each with its instance and roles.
 
+## How the host answers
+
+A quest reaches the game's state through riverrun's host binding, which cairn uses as it is:
+
+1. **Declared in the story.** `count(kind: ref of item_kind) -> int (reads stock(kind))` is in the game's
+   vocabulary; the compiled story keeps its name, its signature and its stamp.
+2. **Bound at load.** The game binds an implementation to each extern by name, checked: a Zig game passes a struct
+   of functions, reflected into a table indexed by extern id; a C, C++ or C# game binds by name with a function
+   pointer. A story's `ref` literals (`wolf_pelt`) are stable text ids the game resolves to its own handles once,
+   at load, against the manifest the checker also read, so a typo fails at build.
+3. **Called with a context.** A condition's evaluation calls `count(wolf_pelt)` through the table with the instance
+   and the scope's owner, so a server knows whose inventory to read.
+4. **Woken by stamps.** When an instance starts, its conditions are filed under the stamps their queries read, with
+   the arguments bound (`stock(wolf_pelt)`). The game's inventory bumps that stamp when pelts come or go, through a
+   small adapter it writes once, or, on an engine whose fact store is its own records, through the engine's change
+   stream; the next step evaluates only the conditions filed there.
+
+```
+.river ── compile ──▶ extern table: count(ref of item_kind) -> int, reads stock(kind)
+                         │ load: bind count → inventory.count · resolve "wolf_pelt" → handle
+tick:  inventory changes ──▶ stamp(stock, wolf_pelt)
+       cairn.step ──▶ conditions under (stock, wolf_pelt) ──▶ count(ctx, wolf_pelt) = 7 ──▶ 7 of 10
+```
+
+## One language
+
+cairn has no language of its own. Quests are written in `.river` beside the dialogue that drives them: riverrun's
+reader, checker, ids, modules, translation and tools serve both, and a writer learns one thing. cairn adds
+vocabulary, not grammar: the `quest` kind, its tag schema (`stage`, `objective`, `outcome`, `fails`, `live`,
+`after`, `repeat`, `active`, `keeps`) and its builtins (`since`), registered with riverrun's compiler.
+
 ## Checks when compiling
 
 cairn's pass runs inside riverrun's check, with riverrun's diagnostics:
