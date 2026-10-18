@@ -106,7 +106,9 @@ protocol.
 
 ## Evaluation: work follows change
 
-The executor is data-oriented and incremental:
+riverrun's evaluation layer, which runs `(rules)` sections, is cairn's engine too: a quest is rules with quest
+meaning on top (stages that latch, outcomes, the journal, roles, instances, the active set). The evaluator, written
+once in riverrun and shared, is data-oriented and incremental:
 
 - **A dependency index**, built when the story loads: for every fact, the conditions that read it, as a compressed
   sparse array. Other quests' stages are facts too, so dependencies between quests are the same index.
