@@ -1,0 +1,17 @@
+// Order matters: you told her before he found out, or he found out first.
+facts (world):
+  told_her:      bool   (game)
+  he_found_out:  bool   (game)
+  days:          int    (game)
+
+== confession (quest)                                    # title "What she knew"
+= told         when { told_her }                         # stage
+  You told her.                                          # id c1
+= discovered   when { he_found_out }                     # stage
+  He found out.                                          # id c2
+= waited       when { since(told, days) >= 2 }           # stage · after told
+  Two days, and she has said nothing.                    # id c3
+= trusted      when { told and discovered and before(told, discovered) }   # outcome
+  She heard it from you first.                           # id c4
+= betrayed     when { told and discovered and before(discovered, told) }   # fails
+  She heard it from him.                                 # id c5

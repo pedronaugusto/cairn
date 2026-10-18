@@ -1,0 +1,52 @@
+// Quest-givers who can be killed: shared rules fail every quest whose giver
+// dies, written once; a quest that says otherwise keeps its own.
+facts (world):
+  dead(person): bool   (game)
+  has_ring: bool       (game)
+  debt_paid: bool
+extern:
+  count(kind: ref of item_kind) -> int   (reads stock(kind))
+  name(who: ref of person) -> text
+
+== everyone (quest rules)
+facts:
+  giver: ref of person   (role)
+= abandoned    when { dead(giver) }                      # fails
+  Nobody else will pay for this: {name(giver)} is dead.  # id r1
+
+== pelts (quest)                                         # start host · title "Ten pelts"
+facts:
+  giver: ref of person   (role)
+= asked        when { true }                             # stage
+  Ten pelts before the frost.                            # id p1
+= brought      when { count(wolf_pelt) >= 10 }           # outcome · after asked
+  The pelts are hers.                                    # id p2
+
+== ring (quest)                                          # start host
+facts:
+  giver: ref of person   (role)
+= asked        when { true }                             # stage · active open_gate
+  Find the ring she lost.                                # id g1
+= found        when { has_ring }                         # outcome · after asked
+  The ring, in the mud by the gate.                      # id g2
+
+== debt (quest)                                          # start host
+facts:
+  giver: ref of person   (role)
+= owed         when { true }                             # stage
+  You owe him, and he means to collect.                  # id d1
+= abandoned    when { dead(giver) }                      # outcome · after owed
+  With him dead, nobody is owed anything.                # id d2
+= settled      when { debt_paid and not dead(giver) }    # outcome · after owed
+  Paid in full.                                          # id d3
+
+== letter (quest)                                        # start host
+= sent         when { debt_paid }                        # outcome
+  The letter goes, and nobody is left to read it.        # id l1
+
+== market
+* Pay what you owe.                                      # id m1
+  ~ debt_paid = true
+  -> end
+* Not today.                                             # id m2
+  -> end
