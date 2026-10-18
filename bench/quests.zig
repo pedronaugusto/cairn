@@ -195,9 +195,12 @@ pub fn main(init: std.process.Init) !void {
     try c.load();
     var said: [1024]u8 = undefined;
     var stderr = std.Io.File.stderr().writerStreaming(init.io, &said);
-    try report(&c, &stderr.interface);
-    try instances(init.gpa, init.io, &stderr.interface, if (options.smoke) 100 else 100_000);
-    try stderr.interface.flush();
+    // a smoke run reports into nothing: under the gate a passing run says nothing
+    var nothing: std.Io.Writer.Discarding = .init(&.{});
+    const out = if (options.smoke) &nothing.writer else &stderr.interface;
+    try report(&c, out);
+    try instances(init.gpa, init.io, out, if (options.smoke) 100 else 100_000);
+    try out.flush();
     var buffer: [4096]u8 = undefined;
     var writer = std.Io.File.stdout().writerStreaming(init.io, &buffer);
     try shakedown.bench.run(WorkloadError, init.gpa, init.io, &writer.interface, &c, &rows, .{ .commit = provenance.commit, .cpu = provenance.cpu, .os = provenance.os }, options);
