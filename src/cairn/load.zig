@@ -117,3 +117,39 @@ fn alsoOf(arena: std.mem.Allocator, s: *const story.Story, plan: block.Plan, q: 
     }
     return out.items;
 }
+
+const testing = @import("testing.zig");
+
+test "a block that names what its story does not have is refused by name" {
+    const gpa = std.testing.allocator;
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    var fine = try testing.build(gpa, null);
+    defer fine.deinit(gpa);
+    const s: story.Story = try .init(fine.graph, .{});
+    const loaded = try load(arena.allocator(), &s);
+    try std.testing.expectEqual(@as(usize, 2), loaded.plan.quests[0].stages.len);
+    const Damage = struct {
+        var stages: [2]block.Stage = undefined;
+        var quests: [1]block.Quest = undefined;
+        // the second stage's condition is two terms of an `and` that has three
+        fn condition(p: *block.Plan) void {
+            quests[0] = p.quests[0];
+            @memcpy(&stages, p.quests[0].stages);
+            stages[1].when.len = 2;
+            quests[0].stages = &stages;
+            p.quests = &quests;
+        }
+        fn status(p: *block.Plan) void {
+            quests[0] = p.quests[0];
+            quests[0].status = quests[0].stages[0].fact;
+            p.quests = &quests;
+        }
+    };
+    for ([_]*const fn (*block.Plan) void{ Damage.condition, Damage.status }) |damage| {
+        var bad = try testing.build(gpa, damage);
+        defer bad.deinit(gpa);
+        const b: story.Story = try .init(bad.graph, .{});
+        try std.testing.expectError(error.NotThisStory, load(arena.allocator(), &b));
+    }
+}

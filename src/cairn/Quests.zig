@@ -766,3 +766,60 @@ pub fn say(q: *Quests, words: *const story_.Strings, i: Instance, stage: StageId
     };
     return run.text.render(cx, words, text);
 }
+
+const testing = @import("testing.zig");
+
+test "a quest that starts itself is reached as its facts change, and ends at its outcome" {
+    const gpa = std.testing.allocator;
+    var built = try testing.build(gpa, null);
+    defer built.deinit(gpa);
+    const s: story_.Story = try .init(built.graph, .{});
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    var memory: facts.Memory = try .init(gpa, try s.schema(arena.allocator()));
+    defer memory.deinit();
+    const owners: [facts.max_scopes]u64 = @splat(0);
+    var q: Quests = try .init(gpa, &s, memory.store(), &run.Host.none, &owners, .{});
+    defer q.deinit();
+    const i: Instance = .{ .quest = q.questNamed("q").? };
+    try std.testing.expectEqual(@as(usize, 0), (try q.step()).events.len);
+    try memory.set(s.factNamed("met").?, .{ .boolean = true });
+    const first = try q.step();
+    try std.testing.expect(first.events[0].what == .started);
+    try std.testing.expectEqual(q.stageNamed(i.quest, "noticed").?, q.current(i).?);
+    // what a stage does is emitted, never applied
+    try memory.set(s.factNamed("told").?, .{ .boolean = true });
+    const last = try q.step();
+    try std.testing.expectEqual(Status.done, q.status(i));
+    try std.testing.expectEqual(@as(usize, 1), last.events[0].what.reached.effects.len);
+    try std.testing.expectEqual(@as(i64, 0), memory.get(s.factNamed("gold").?).int);
+    var entries: [4]Entry = undefined;
+    try std.testing.expectEqual(@as(usize, 2), q.journal(i, &entries).len);
+    // a quest that ran once is not started again
+    try std.testing.expectError(error.AlreadyStarted, q.start(i.quest, &.{}));
+    try std.testing.expectError(error.WrongRoles, q.start(i.quest, &.{.{ .int = 1 }}));
+}
+
+test "the quests are what the facts say, however they came to say it" {
+    const gpa = std.testing.allocator;
+    var built = try testing.build(gpa, null);
+    defer built.deinit(gpa);
+    const s: story_.Story = try .init(built.graph, .{});
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    var memory: facts.Memory = try .init(gpa, try s.schema(arena.allocator()));
+    defer memory.deinit();
+    const owners: [facts.max_scopes]u64 = @splat(0);
+    // a save in which the quest was started and noticed: nothing is said of it, and it goes on from there
+    try memory.set(s.factNamed("q.@status").?, .{ .one_of = 0 });
+    try memory.set(s.factNamed("q.noticed").?, .{ .boolean = true });
+    var q: Quests = try .init(gpa, &s, memory.store(), &run.Host.none, &owners, .{});
+    defer q.deinit();
+    const i: Instance = .{ .quest = q.questNamed("q").? };
+    try std.testing.expectEqual(Status.active, q.status(i));
+    try std.testing.expectEqual(q.stageNamed(i.quest, "noticed").?, q.current(i).?);
+    _ = try q.step();
+    try memory.set(s.factNamed("told").?, .{ .boolean = true });
+    _ = try q.step();
+    try std.testing.expectEqual(Status.done, q.status(i));
+}
