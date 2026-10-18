@@ -60,6 +60,9 @@ facts:
 - **`when`** is the condition that reaches it, over the story's facts, the quest's own facts and roles, other quests
   (`the_stranger.named`) and the host's queries. **`after`** orders stages for the journal and for analysis; it
   is not a gate unless the condition says so.
+- **Relative deadlines:** `since(stage, clock)` is how far a `(clock)` fact has moved since the stage was reached
+  (cairn records the clock's value then), so `fails when { since(accepted, day) > 3 }` needs no arithmetic in the
+  language and joins the clock's threshold index.
 - **Reached is kept.** Once reached, a stage stays reached (its fact latches), unless it is tagged `live`: then it
   follows its condition, for "carry the lamp" kinds of objective that can be undone.
 - **Outcomes end the quest; `fails` ends it failed.** A quest may have many outcomes, each a different ending. A
@@ -175,6 +178,12 @@ A game that runs quests links `run` beside riverrun's `run`; the checker and com
   few hundred terms are evaluated, microseconds, however many quests are open.
 - **State:** a few bytes per stage reached and per role; a hundred thousand instances of repeatable quests fit in a
   few megabytes of facts.
+
+## Time without a dependency
+
+cairn needs of time only that a `(clock)` fact never goes back. It does not use tide: any clock a host keeps (tide's,
+void-engine's sim clock, a server's) serves, and a calendar's days and slots reach quests as ordinary facts. The two
+meet in facts, so a game can take either alone.
 
 ## Bounds
 
