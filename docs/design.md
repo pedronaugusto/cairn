@@ -60,14 +60,20 @@ facts:
 - **`when`** is the condition that reaches it, over the story's facts, the quest's own facts and roles, other quests
   (`the_stranger.named`) and the host's queries. **`after`** orders stages for the journal and for analysis; it
   is not a gate unless the condition says so.
-- **Relative deadlines:** `since(stage, clock)` is how far a `(clock)` fact has moved since the stage was reached
-  (cairn records the clock's value then), so `fails when { since(accepted, day) > 3 }` needs no arithmetic in the
-  language and joins the clock's threshold index.
+- **Since a stage:** `since(stage, fact)` is how far an int fact has moved since the stage was reached (cairn
+  records its value then), so counting from acceptance needs no arithmetic in the language: `when {
+  since(accepted, wolves_killed) >= 10 }`, and over a `(clock)` fact a relative deadline, `fails when {
+  since(accepted, day) > 3 }`, which joins the clock's threshold index.
 - **Reached is kept.** Once reached, a stage stays reached (its fact latches), unless it is tagged `live`: then it
   follows its condition, for "carry the lamp" kinds of objective that can be undone.
 - **Outcomes end the quest; `fails` ends it failed.** A quest may have many outcomes, each a different ending. A
   quest ends when its first outcome or failure is reached; reaching two in one step is an error the checker rules out
   where it can and the runtime reports where it cannot.
+- **Queries in quests declare what invalidates them.** A host query reads state riverrun cannot see (an
+  inventory, a position), so its answer cannot be watched. A query used in a quest condition is declared with the
+  facts that stamp its state, `has_item(ref of item) -> bool (reads inventory)`, where `inventory` is a counter the
+  host bumps when the inventory changes; the condition then wakes on that fact like any other. A query without one is
+  refused in quests by the checker. *Protects:* incremental evaluation with no condition polled every step.
 - **Effects** under a stage are emitted when it is reached: rewards, changes to facts, actions. cairn applies none.
 - **Journal entries** are a stage's lines, with stable ids, translated and voiced like dialogue.
 - **Roles** are `ref` facts, opaque handles the host owns (an entity, an item, a place), declared with a kind and
