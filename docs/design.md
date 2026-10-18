@@ -71,9 +71,11 @@ facts:
   where it can and the runtime reports where it cannot.
 - **Queries in quests declare what invalidates them.** A host query reads state riverrun cannot see (an
   inventory, a position), so its answer cannot be watched. A query used in a quest condition is declared with the
-  facts that stamp its state, `has_item(ref of item) -> bool (reads inventory)`, where `inventory` is a counter the
-  host bumps when the inventory changes; the condition then wakes on that fact like any other. A query without one is
-  refused in quests by the checker. *Protects:* incremental evaluation with no condition polled every step.
+  stamp of its state, keyed by its arguments where that is finer: `count(kind: ref of item_kind) -> int (reads
+  stock(kind))`. The host bumps `stock(wolf_pelt)` when pelts come or go, and only the conditions filed under
+  (`count`, `wolf_pelt`) wake: a pickup in a game of ten thousand item kinds touches a handful. A query without a
+  stamp is refused in quests by the checker. *Protects:* incremental evaluation with no condition polled every
+  step, and no copy of the host's state in facts.
 - **Effects** under a stage are emitted when it is reached: rewards, changes to facts, actions. cairn applies none.
 - **Journal entries** are a stage's lines, with stable ids, translated and voiced like dialogue.
 - **Roles** are `ref` facts, opaque handles the host owns (an entity, an item, a place), declared with a kind and
