@@ -64,6 +64,11 @@ facts:
   records its value then), so counting from acceptance needs no arithmetic in the language: `when {
   since(accepted, wolves_killed) >= 10 }`, and over a `(clock)` fact a relative deadline, `fails when {
   since(accepted, day) > 3 }`, which joins the clock's threshold index.
+- **Order:** `before(a, b)` holds when stage `a` was reached and `b` was not, or `a` first; cairn already records
+  when each stage is reached, so "you told her before he found out" needs no arithmetic.
+- **Shared rules.** A quest inherits the rules of a module's `(quest rules)` section by role or tag: `fails when {
+  not alive(giver) }` written once for every quest with a `giver`, overridable by any quest that says otherwise.
+  *Protects:* a thousand quests that do not each restate what the world means.
 - **Reached is kept.** Once reached, a stage stays reached (its fact latches), unless it is tagged `live`: then it
   follows its condition, for "carry the lamp" kinds of objective that can be undone.
 - **Outcomes end the quest; `fails` ends it failed.** A quest may have many outcomes, each a different ending. A
