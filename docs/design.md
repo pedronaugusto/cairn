@@ -153,6 +153,7 @@ A game that runs quests links `run` beside riverrun's `run`; the checker and com
   validated by its owner's reader.
 - **A `ref` fact type:** an opaque 64-bit handle the host owns, declared with a kind (`ref of person`), compared and
   stored, never inspected. Any engine's entities, items and places reach stories through it.
+- **`(clock)` facts:** an int the host only advances, which the checker and the evaluator may treat as monotonic.
 - The change stamps and `Watcher` it already has.
 
 ## Packages
