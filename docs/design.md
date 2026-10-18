@@ -100,6 +100,10 @@ The executor is data-oriented and incremental:
   to a fixed point, bounded by a named error (a cycle the checker missed cannot hang the host).
 - **No allocation per step.** Instance state is structs of arrays indexed by distinct ids (aegis), the candidates a
   reused bitset, the output written into a caller's buffer.
+- **Deadlines cost nothing while time passes.** A condition that compares a fact declared `(clock)` (a monotonic
+  time the host advances: a day, an hour, seconds) against a value is indexed by when it can change, in a heap. The
+  clock ticking wakes only the conditions whose moment has come, so a real-time game pays nothing per tick for its
+  thousand timed quests, and a calendar game's day changing wakes only what that day decides.
 - **Budgets.** A host may bound conditions evaluated per step and carry the rest to the next, for frame budgets; the
   result is the same as an unbounded step taken later.
 - **Determinism.** No clock (time is a fact the host sets), no randomness, a fixed evaluation order (by id), so a
@@ -172,4 +176,21 @@ A game that runs quests links `run` beside riverrun's `run`; the checker and com
 
 ## Bounds
 
-Stages per quest 256, roles per quest 16, instances per quest 65,536, steps to a fixed point 64, each a named error.
+Stages per quest 256, roles per quest 16, steps to a fixed point 64, each a named error. Instances are counted per
+store, not per game: a server keeps a store per player, party or region, so a persistent world's millions of
+instances are many stores' thousands.
+
+## Shapes it serves
+
+- **A calendar game** (Persona's kind). The date and time slot are `(clock)` facts; a deadline is a failure
+  (`fails when { day > may_5 and not heart_stolen }`); a bond's ranks are stages over its points and the free slots,
+  each rank's scene a riverrun section; requests are repeatable quests. What the day offers is the active set.
+- **A story-driven role-playing game** (a JRPG's main line and side quests, or one of many endings). Chapters are
+  quests whose outcomes start the next; side quests read the main line's stages; endings are outcomes over
+  everything the player did.
+- **A procedural universe** (No Man's Sky's kind). Missions are templates whose roles the host binds to generated
+  planets, ships and goods, as `ref`s; which template a board offers is a riverrun pool, chosen by specificity over
+  the world's facts; journal lines show the roles through the host's queries (`{name(target)}`).
+- **A persistent world** (Star Citizen's kind). The server runs cairn, the authority; facts live in stores per player,
+  party and region, backed by the game's own database through the store interface; a world event is a region's quest
+  whose players' contributions are facts in their own scopes; clients receive facts, never quest logic.
