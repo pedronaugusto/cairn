@@ -18,3 +18,9 @@ got, how it ended, and what the world shows because of it.
   story's build stands on; run by `cairn.Quests`.
 
 The design is [docs/design.md](docs/design.md).
+
+## Stability
+
+cairn is 0.x and tracks Zig 0.17.x. A breaking change comes only in a minor release
+(0.1 to 0.2), with a CHANGELOG entry saying what changed and what to write instead; a
+patch release never breaks.
