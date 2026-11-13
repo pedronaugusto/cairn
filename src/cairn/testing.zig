@@ -10,7 +10,6 @@ const block = @import("block.zig");
 
 const story = riverrun.story;
 const Builder = story.Builder;
-const Term = story.Term;
 
 pub const Built = struct {
     graph: []u8,

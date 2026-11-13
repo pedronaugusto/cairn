@@ -185,7 +185,8 @@ fn deinitRuns(q: *Quests) void {
 }
 
 // What answers cairn's builtins: the loaded plan and the store, where they stay while the quests move.
-const Answers = struct { loaded: *const load_.Loaded, store: facts.Store, story: *const story_.Story };
+/// What a builtin's answer reads: the plan, the facts and the story.
+pub const Answers = struct { loaded: *const load_.Loaded, store: facts.Store, story: *const story_.Story };
 
 fn builtins(q: *const Quests) run.Builtins {
     return .{ .user = q.answers, .call = answer };
@@ -400,7 +401,7 @@ fn watchStage(q: *Quests, r: u32, k: u8) Error!void {
     const reads = try fixed.allocator().alloc(react.Read, also.len);
     for (reads, also) |*o, a| o.* = .{ .fact = a.fact, .key = if (a.own and x.key != Value.no_ref) x.key else null };
     const when: story_.Range = .{ .start = st.when.start, .len = st.when.len };
-    q.runs.items[r].conds[k] = try q.watch.add(when, r << 8 | k, .{ .this = x.key, .roles = roles, .also = reads });
+    q.runs.items[r].conds[k] = try q.watch.add(when, (r << 8) | k, .{ .this = x.key, .roles = roles, .also = reads });
 }
 
 // Every stage of an active run that can still change: those not reached, and the live.
@@ -604,7 +605,7 @@ fn leave(q: *Quests, r: u32, k: u8) Error!void {
     const i = q.instanceOf(r);
     const p = q.plan(i.quest);
     try q.writeFact(p.stages[k].fact, i.key, .{ .boolean = false });
-    if (p.current != block.none16 and q.current(i) != null and q.current(i).?.raw() == k) {
+    if (p.current != block.none16 and q.current(i) != null and q.current(i).?.eql(.fromRaw(k))) {
         try q.writeFact(p.current, i.key, .{ .one_of = Value.none });
         try q.repairCurrent(i);
     }

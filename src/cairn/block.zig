@@ -13,6 +13,7 @@
 //! story is checked against the story when it is loaded.
 
 const std = @import("std");
+const aegis = @import("aegis");
 
 /// The block's name in a compiled story.
 pub const name = "cairn";
@@ -136,15 +137,15 @@ pub const StageRef = packed struct(u32) { stage: u8, quest: u24 };
 
 /// The block's bytes, on `gpa`, owned by the caller.
 pub fn write(gpa: std.mem.Allocator, p: Plan) error{OutOfMemory}![]u8 {
-    std.debug.assert(p.quests.len <= max_quests);
-    std.debug.assert(p.calls.len <= max_calls);
+    aegis.assert.invariant(p.quests.len <= max_quests, "a plan holds at most max_quests quests, as the compiler builds it");
+    aegis.assert.invariant(p.calls.len <= max_calls, "a plan holds at most max_calls calls, as the compiler builds it");
     var w: Writer = .{ .gpa = gpa };
     errdefer w.out.deinit(gpa);
     try w.int(u32, @intCast(p.quests.len)); // safe: asserted above
     for (p.quests) |q| try w.quest(q);
     try w.int(u32, @intCast(p.calls.len)); // safe: asserted above
     for (p.calls) |c| try w.call(c);
-    std.debug.assert(p.readers.stages.len <= max_reads);
+    aegis.assert.invariant(p.readers.stages.len <= max_reads, "a plan holds at most max_reads stage readers, as the compiler builds it");
     try w.int(u32, @intCast(p.readers.starts.len)); // safe: one more than the story's facts
     for (p.readers.starts) |s| try w.int(u32, s);
     try w.int(u32, @intCast(p.readers.stages.len)); // safe: asserted above
@@ -163,10 +164,10 @@ const Writer = struct {
     }
 
     fn quest(w: *Writer, q: Quest) error{OutOfMemory}!void {
-        std.debug.assert(q.roles.len <= max_roles);
-        std.debug.assert(q.stages.len <= max_stages);
+        aegis.assert.invariant(q.roles.len <= max_roles, "a quest holds at most max_roles roles");
+        aegis.assert.invariant(q.stages.len <= max_stages, "a quest holds at most max_stages stages");
         try w.int(u32, q.section);
-        try w.int(u8, @as(u8, @intFromBool(q.repeat)) | @as(u8, @intFromBool(q.starts_itself)) << 1);
+        try w.int(u8, @as(u8, @intFromBool(q.repeat)) | (@as(u8, @intFromBool(q.starts_itself)) << 1));
         try w.int(u16, q.status);
         try w.int(u16, q.current);
         try w.int(u16, q.count);
@@ -182,11 +183,11 @@ const Writer = struct {
         try w.int(u32, s.when.start);
         try w.int(u32, s.when.len);
         try w.int(u8, @backingInt(s.kind));
-        try w.int(u8, @as(u8, @intFromBool(s.live)) | @as(u8, @intFromBool(s.optional)) << 1);
+        try w.int(u8, @as(u8, @intFromBool(s.live)) | (@as(u8, @intFromBool(s.optional)) << 1));
         try w.list(u8, s.after);
         try w.list(u32, s.active);
         try w.list(u32, s.keeps);
-        std.debug.assert(s.roles.len <= max_roles);
+        aegis.assert.invariant(s.roles.len <= max_roles, "a stage names at most max_roles roles");
         try w.int(u8, @intCast(s.roles.len)); // safe: asserted above
         for (s.roles) |r| {
             try w.int(u16, r.fact);
@@ -195,7 +196,7 @@ const Writer = struct {
     }
 
     fn list(w: *Writer, comptime T: type, items: []const T) error{OutOfMemory}!void {
-        std.debug.assert(items.len <= std.math.maxInt(u8));
+        aegis.assert.invariant(items.len <= std.math.maxInt(u8), "a list fits its u8 length");
         try w.int(u8, @intCast(items.len)); // safe: asserted above
         for (items) |v| try w.int(T, v);
     }

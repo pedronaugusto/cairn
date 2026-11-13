@@ -119,7 +119,8 @@ const Context = struct {
         for (0..c.story.len(.facts)) |i| {
             const name = c.story.fact(.fromRaw(@intCast(i))).name; // safe: below the facts' count
             if (name.len < 2 or name[0] != 'f') continue;
-            const n = std.fmt.parseInt(usize, name[1..], 10) catch continue;
+            // a fact named otherwise is not one the bench made
+            const n = (std.fmt.parseInt(usize, name[1..], 10) catch null) orelse continue;
             if (n < out.len) out[n] = .fromRaw(@intCast(i)); // safe: below the facts' count
         }
         return out;
