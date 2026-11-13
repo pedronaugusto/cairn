@@ -8,6 +8,7 @@ const riverrun = @import("riverrun-compiler");
 const runtime = @import("riverrun");
 const cairn = @import("cairn");
 const vocabulary = @import("vocabulary.zig");
+const shakedown = @import("shakedown");
 
 const gpa = std.testing.allocator;
 const check = riverrun.check;
@@ -113,6 +114,56 @@ test "`after` names stages of the quest and never goes round" {
     );
     defer round.deinit();
     try round.only(.err, 4, 3, "`a`'s `after` comes round to it again: what comes after what in `q` goes one way");
+}
+
+test "any quest's `after` is refused when it comes round, and only then" {
+    try shakedown.check(gpa, {}, struct {
+        fn one(_: void, case: *shakedown.Case) anyerror!void {
+            var arena: std.heap.ArenaAllocator = .init(gpa);
+            defer arena.deinit();
+            const a = arena.allocator();
+            const n = shakedown.gen.intRange(case.source, usize, 1, 6);
+            const after = try a.alloc([]bool, n);
+            var text: std.Io.Writer.Allocating = .init(a);
+            try text.writer.writeAll("facts:\n  met: bool   (game)\n== q (quest)\n");
+            for (after, 0..) |*row, i| {
+                row.* = try a.alloc(bool, n);
+                try text.writer.print("= s{d}   when {{ met }}   # {s}", .{ i, if (i == n - 1) "outcome" else "stage" });
+                var first = true;
+                for (row.*, 0..) |*edge, k| {
+                    edge.* = shakedown.gen.intRange(case.source, u8, 0, 3) == 0;
+                    if (!edge.*) continue;
+                    try text.writer.print("{s}s{d}", .{ if (first) " · after " else ", ", k });
+                    first = false;
+                }
+                try text.writer.writeByte('\n');
+            }
+            var b = try build(text.written());
+            defer b.deinit();
+            var named: ?usize = null;
+            for (b.diags.list.items) |d| if (std.mem.find(u8, d.message, "comes round to it again") != null) {
+                try std.testing.expect(named == null);
+                named = d.span.line - 4; // the stages start on the fourth line
+            };
+            if (named) |at| {
+                // the stage it names is on a cycle: it comes after itself
+                try std.testing.expect(reaches(after, at, at, try a.alloc(bool, n)));
+            } else {
+                for (0..n) |k| try std.testing.expect(!reaches(after, k, k, try a.alloc(bool, n)));
+            }
+        }
+
+        // Whether `to` comes after `from` by one `after` or more, `seen` all false at first.
+        fn reaches(after: []const []const bool, from: usize, to: usize, seen: []bool) bool {
+            for (after[from], 0..) |edge, k| {
+                if (!edge or seen[k]) continue;
+                if (k == to) return true;
+                seen[k] = true;
+                if (reaches(after, k, to, seen)) return true;
+            }
+            return false;
+        }
+    }.one, .{ .cases = 300, .seed = 0xca3 });
 }
 
 test "activation keys are the host's, and `follows` names shared rules" {

@@ -62,6 +62,8 @@ pub fn dev(b: *std.Build, tools: type) void {
     runtime_tests.root_module.addImport("shakedown", b.dependency("shakedown", .{ .target = target, .optimize = optimize }).module("shakedown"));
     test_step.dependOn(&b.addRunArtifact(runtime_tests).step);
     const front_tests = b.addTest(.{ .name = "cairn-compiler-tests", .filters = filters, .root_module = compiler(package) orelse return });
+    // The quest reader's properties: shakedown, in the development graph alone.
+    front_tests.root_module.addImport("shakedown", b.dependency("shakedown", .{ .target = target, .optimize = optimize }).module("shakedown"));
     test_step.dependOn(&b.addRunArtifact(front_tests).step);
     test_step.dependOn(&b.addRunArtifact(storyTests(b, package, filters) orelse return).step);
     tools.preflight.addCi(b, package.builder, .{
