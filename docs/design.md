@@ -112,7 +112,7 @@ Built: all of the above.
 
 Everything cairn keeps is facts in riverrun's store: each instance's stages reached, current stage, roles, its own
 facts and its status, in the scope the story declares for its quests. So
-quests save, replicate, journal and restore exactly as everything else does: void-engine's record store holds them,
+quests save, replicate, journal and restore exactly as everything else does: an engine's record store holds them,
 its delta stream replicates them, its journal replays them. cairn adds no store, no save format and no network
 protocol.
 
@@ -235,7 +235,7 @@ Built.
 cairn's model joins riverrun-studio's: quests as their own graph (stages, `after`, outcomes, the facts that drive
 them, and the sections that set those facts), **why** (for a stage not reached: which term of its condition is
 false, and what in the story or the game would make it true), and the timeline of a playthrough's fact changes and
-the stages they reached. `weir` draws them in the terminal; void-engine's editor draws the same commands.
+the stages they reached. A terminal tool and an engine's editor can draw them from the same commands.
 
 Not built. What they stand on is: `cairn-compiler`'s `read` (a checked story's quests), the block's dependency
 index (`Quests.readers`), and the events a step returns.
@@ -309,7 +309,7 @@ them.
 ## Time without a dependency
 
 cairn needs of time only that a `(clock)` fact never goes back. It does not use tide: any clock a host keeps (tide's,
-void-engine's sim clock, a server's) serves, and a calendar's days and slots reach quests as ordinary facts. The two
+an engine's sim clock, a server's) serves, and a calendar's days and slots reach quests as ordinary facts. The two
 meet in facts, so a game can take either alone.
 
 ## Bounds

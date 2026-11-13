@@ -27,4 +27,5 @@ test {
     _ = block;
     _ = @import("cairn/load.zig");
     _ = @import("cairn/ids.zig");
+    _ = @import("cairn/block_test.zig");
 }

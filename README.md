@@ -19,8 +19,30 @@ got, how it ended, and what the world shows because of it.
 
 The design is [docs/design.md](docs/design.md).
 
+## Install
+
+Requires Zig 0.17. Fetch with `zig fetch --save git+https://github.com/pedronaugusto/cairn`. The runtime is the
+`cairn` module, on aegis and riverrun. A story's build lists `cairn.package` in its vocabulary and hands
+`cairn.compiler(dep)` to riverrun's `addStory` as the `cairn-compiler` package, both on the riverrun the build
+stands on.
+
+## Scope
+
+cairn keeps quests as the story's facts and adds no store, save format or network of its own; it keeps no time
+(any clock fact that never goes back serves) and draws nothing.
+
+## Testing
+
+`bay test` runs the unit suite: stages, roles, repeats and inherited rules; the checks on compiled stories through
+riverrun's `addStory`; a story told to each of its endings; and properties of the compiled block (a plan written
+reads back as itself, and any bytes read to a plan or are refused, a block whole or not at all).
+
 ## Stability
 
 cairn is 0.x and tracks Zig 0.17.x. A breaking change comes only in a minor release
 (0.1 to 0.2), with a CHANGELOG entry saying what changed and what to write instead; a
 patch release never breaks.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
