@@ -64,6 +64,7 @@ pub fn dev(b: *std.Build, tools: type) void {
     const front_tests = b.addTest(.{ .name = "cairn-compiler-tests", .filters = filters, .root_module = compiler(package) orelse return });
     // The quest reader's properties: shakedown, in the development graph alone.
     front_tests.root_module.addImport("shakedown", b.dependency("shakedown", .{ .target = target, .optimize = optimize }).module("shakedown"));
+    front_tests.root_module.addAnonymousImport("quest-seeds", .{ .root_source_file = questSeeds(b, package) });
     test_step.dependOn(&b.addRunArtifact(front_tests).step);
     test_step.dependOn(&b.addRunArtifact(storyTests(b, package, filters) orelse return).step);
     tools.preflight.addCi(b, package.builder, .{
@@ -75,6 +76,19 @@ pub fn dev(b: *std.Build, tools: type) void {
             .optimize = optimize,
         },
     });
+}
+
+// The stories' text, each a `[]const u8` in `all`, for the properties that start from real quests.
+fn questSeeds(b: *std.Build, package: *std.Build.Dependency) std.Build.LazyPath {
+    const files = b.addWriteFiles();
+    var root: std.ArrayList(u8) = .empty;
+    root.appendSlice(b.allocator, "//! The stories cairn's development compiles, as text.\npub const all = [_][]const u8{\n") catch @panic("OOM");
+    for (stories) |s| {
+        _ = files.addCopyFile(package.path(s.file), b.fmt("{s}.river", .{s.name}));
+        root.print(b.allocator, "    @embedFile(\"{s}.river\"),\n", .{s.name}) catch @panic("OOM");
+    }
+    root.appendSlice(b.allocator, "};\n") catch @panic("OOM");
+    return files.add("seeds.zig", root.items);
 }
 
 // The stories through `addStory`, their compiler and cairn's compiler side on one riverrun for the machine doing

@@ -22,6 +22,19 @@ const Vocabulary = struct {
 };
 const joined = riverrun.join(Vocabulary);
 
+/// The vocabulary cairn's stories are compiled with (tools/vocabulary.zig): the game's `phone` key and its
+/// activation keys, with cairn registered.
+const StoryVocabulary = struct {
+    const schema: check.Schema = .{ .keys = &.{.{ .name = "phone", .on = .{ .section = true } }} };
+    pub const options: check.Options = .{
+        .schema = &schema,
+        .things = &.{.{ .kind = "activation", .ids = &.{ "spawn_stranger", "pin_letter", "pin_target", "open_gate" } }},
+    };
+    pub const packages: []const riverrun.Package = &.{vocabulary.package};
+};
+const story_vocabulary = riverrun.join(StoryVocabulary);
+const seeds = @import("quest-seeds");
+
 pub const Built = struct {
     arena: std.heap.ArenaAllocator,
     diags: riverrun.syntax.Diagnostics,
@@ -61,12 +74,17 @@ pub const Built = struct {
 
 /// Reads, checks (riverrun's checker, cairn's within it) and, when nothing is wrong, compiles `text`.
 pub fn build(text: []const u8) !Built {
+    return buildWith(joined, text);
+}
+
+/// `build`, with the vocabulary `with` joins.
+fn buildWith(comptime with: anytype, text: []const u8) !Built {
     var b: Built = .{ .arena = .init(gpa), .diags = .{} };
     errdefer b.deinit();
     const tree = try b.arena.allocator().create(riverrun.syntax.ast.File);
     tree.* = try riverrun.syntax.parse(b.arena.allocator(), gpa, &b.diags, 0, "a.river", text);
-    b.checked = try check.run(gpa, &b.diags, tree[0..1], joined.options);
-    if (b.diags.errors() == 0) b.compiled = try riverrun.compile.run(gpa, &b.diags, &b.checked.?, .{ .passes = joined.passes });
+    b.checked = try check.run(gpa, &b.diags, tree[0..1], with.options);
+    if (b.diags.errors() == 0) b.compiled = try riverrun.compile.run(gpa, &b.diags, &b.checked.?, .{ .passes = with.passes });
     return b;
 }
 
@@ -164,6 +182,70 @@ test "any quest's `after` is refused when it comes round, and only then" {
             return false;
         }
     }.one, .{ .cases = 300, .seed = 0xca3 });
+}
+
+test "any text, a real quest changed or text of any kind, compiles or is refused, and never crashes" {
+    try shakedown.check(gpa, {}, struct {
+        fn one(_: void, case: *shakedown.Case) anyerror!void {
+            const gen = shakedown.gen;
+            var arena: std.heap.ArenaAllocator = .init(gpa);
+            defer arena.deinit();
+            const a = arena.allocator();
+            var text: std.ArrayList(u8) = .empty;
+            if (gen.intRange(case.source, u8, 0, 3) == 0) {
+                // lines of quest-like pieces in any order
+                for (0..gen.intRange(case.source, usize, 1, 24)) |_| {
+                    try text.appendSlice(a, gen.oneOf(case.source, []const u8, &pieces));
+                    try text.append(a, '\n');
+                }
+            } else {
+                try text.appendSlice(a, gen.oneOf(case.source, []const u8, &seeds.all));
+                for (0..gen.intRange(case.source, usize, 1, 6)) |_| try change(case.source, a, &text);
+            }
+            var b = try buildWith(story_vocabulary, text.items);
+            defer b.deinit();
+            // refused, or compiled: never neither
+            try std.testing.expect(b.diags.errors() > 0 or b.compiled != null);
+        }
+
+        const pieces = [_][]const u8{
+            "facts:",                                "facts (player):",                      "  met: bool   (game)", "  n: int   (clock)",
+            "  who: ref of person   (role)",         "  got: set of a, b",                   "== q (quest)",         "== r (quest)   # follows q",
+            "== shared (rules)",                     "= a   when { met }   # stage",
+            "= b   when { met }   # outcome · after a",
+            "= c   when { n > 2 }   # objective · optional",
+            "= d   when { met }   # fails · live",
+            "= e   # stage · after e, f",
+            "  * Run.",                              "  ~ met = true",                       "    -> end",           "~ activate spawn_stranger",
+            "= f   when { since(a) > 1 }   # stage", "= g   when { before(b) }   # outcome", "cast:",                "  tom  \"Tom\"",
+            "extern:",                               "  name(who: ref of person) -> text",   "",                     "#",
+        };
+
+        // One change to `text`: a byte replaced, cut or added, a line cut, doubled or moved, or the end cut off.
+        fn change(s: *shakedown.Source, a: std.mem.Allocator, text: *std.ArrayList(u8)) !void {
+            if (text.items.len == 0) return text.appendSlice(a, shakedown.gen.oneOf(s, []const u8, &pieces));
+            const at = shakedown.gen.intRange(s, usize, 0, text.items.len - 1);
+            const alphabet = "=#·{}()<>:,.-~*\" \nabcqrsxyz019_";
+            const byte = alphabet[shakedown.gen.intRange(s, usize, 0, alphabet.len - 1)];
+            const start = if (std.mem.findScalarLast(u8, text.items[0..at], '\n')) |nl| nl + 1 else 0;
+            const end = if (std.mem.findScalarPos(u8, text.items, at, '\n')) |nl| nl + 1 else text.items.len;
+            switch (shakedown.gen.intRange(s, u8, 0, 6)) {
+                0 => text.items[at] = byte,
+                1 => _ = text.orderedRemove(at),
+                2 => try text.insert(a, at, byte),
+                3 => text.replaceRangeAssumeCapacity(start, end - start, ""),
+                4 => try text.insertSlice(a, start, try a.dupe(u8, text.items[start..end])),
+                5 => {
+                    const line = try a.dupe(u8, text.items[start..end]);
+                    text.replaceRangeAssumeCapacity(start, end - start, "");
+                    const to = shakedown.gen.intRange(s, usize, 0, text.items.len);
+                    const to_line = if (std.mem.findScalarLast(u8, text.items[0..to], '\n')) |nl| nl + 1 else 0;
+                    try text.insertSlice(a, to_line, line);
+                },
+                else => text.shrinkRetainingCapacity(at),
+            }
+        }
+    }.one, .{ .cases = 600, .seed = 0xca4 });
 }
 
 test "activation keys are the host's, and `follows` names shared rules" {
