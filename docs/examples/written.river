@@ -1,0 +1,21 @@
+// The quests cairn's reader describes: a quest, and the shared rules many quests follow.
+facts:
+  met: bool   (game)
+  hour: int   (clock)
+extern:
+  alive(who: ref of person) -> bool   (reads life(who))
+
+== the_stranger (quest)
+  [title "Who was he?"] [scope player]
+facts (player):
+  stranger: ref of person   (role)
+= noticed   when { met }
+  [stage]
+= gone      when { hour >= 6 }
+  [fails]
+
+== everyone (quest rules)
+facts:
+  giver: ref of person   (role)
+= abandoned   when { not alive(giver) }
+  [fails]

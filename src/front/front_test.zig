@@ -9,6 +9,7 @@ const runtime = @import("riverrun");
 const cairn = @import("cairn");
 const vocabulary = @import("vocabulary.zig");
 const shakedown = @import("shakedown");
+const tools = @import("riverrun-tools");
 
 const gpa = std.testing.allocator;
 const check = riverrun.check;
@@ -204,9 +205,10 @@ test "any quest's `after` is refused when it comes round, and only then" {
     }.one, .{ .cases = 300, .seed = 0xca3 });
 }
 
-test "any text, a real quest changed or text of any kind, compiles or is refused, and never crashes" {
-    try shakedown.check(gpa, {}, struct {
-        fn one(_: void, case: *shakedown.Case) anyerror!void {
+test "any text through riverrun's reader, checker and compiler with cairn registered is a story told and its quests stepped, or diagnostics; never a crash" {
+    var seen: u32 = 0;
+    try shakedown.check(gpa, &seen, struct {
+        fn one(compiled: *u32, case: *shakedown.Case) anyerror!void {
             const gen = shakedown.gen;
             var arena: std.heap.ArenaAllocator = .init(gpa);
             defer arena.deinit();
@@ -222,27 +224,41 @@ test "any text, a real quest changed or text of any kind, compiles or is refused
                 try text.appendSlice(a, gen.oneOf(case.source, []const u8, &seeds.all));
                 for (0..gen.intRange(case.source, usize, 1, 6)) |_| try change(case.source, a, &text);
             }
-            var b = try buildWith(story_vocabulary, text.items);
-            defer b.deinit();
-            // refused, or compiled: never neither
-            try std.testing.expect(b.diags.errors() > 0 or b.compiled != null);
+            const Picker = struct {
+                fn pick(ctx: ?*anyopaque, open: usize) usize {
+                    return gen.intRange(@ptrCast(@alignCast(ctx.?)), usize, 0, open - 1);
+                }
+            };
+            const outcome = try tools.trial.trial(gpa, &.{.{ .path = "quests.river", .text = text.items }}, story_vocabulary, .{ .package = quests }, .{ .ctx = case.source, .pick = Picker.pick });
+            switch (outcome) {
+                .refused => {},
+                .told => compiled.* += 1,
+                .fault => |f| {
+                    var buffer: [256]u8 = undefined;
+                    var w: std.Io.Writer = .fixed(&buffer);
+                    tools.trial.describe(f, &w) catch {};
+                    std.debug.print("{s}\n{s}\n", .{ w.buffered(), text.items });
+                    return error.TestUnexpectedResult;
+                },
+            }
         }
 
         const pieces = [_][]const u8{
-            "facts:",                               "facts (player):",               "  met: bool   (game)",                      "  n: int   (clock)",
-            "  who: ref of person   (role)",        "  got: set of a, b",            "== q (quest)",                              "== r (quest)\n  [follows q]",
-            "== shared (rules)",                    "= a   when { met }\n  [stage]", "= b   when { met }\n  [outcome] [after a]", "= c   when { n > 2 }\n  [objective] [optional]",
-            "= d   when { met }\n  [fails] [live]", "= e\n  [stage] [after e, f]",   "  * Run.",                                  "  [met = true]",
-            "    -> end",                           "[activate spawn_stranger]",     "= f   when { since(a) > 1 }\n  [stage]",    "= g   when { before(b) }\n  [outcome]",
-            "cast:",                                "  tom  \"Tom\"",                "extern:",                                   "  name(who: ref of person) -> text",
-            "",                                     "#",
+            "facts:",                               "facts (player):",                                             "  met: bool   (game)",                      "  n: int   (clock)",
+            "  who: ref of person   (role)",        "  got: set of a, b",                                          "== q (quest)",                              "== r (quest)\n  [follows q]",
+            "== shared (rules)",                    "= a   when { met }\n  [stage]",                               "= b   when { met }\n  [outcome] [after a]", "= c   when { n > 2 }\n  [objective] [optional]",
+            "= d   when { met }\n  [fails] [live]", "= e\n  [stage] [after e, f]",                                 "  * Run.",                                  "  [met = true]",
+            "    -> end",                           "[activate spawn_stranger]",                                   "= f   when { since(a) > 1 }\n  [stage]",    "= g   when { before(b) }\n  [outcome]",
+            "cast:",                                "  tom  \"Tom\"",                                              "extern:",                                   "  name(who: ref of person) -> text",
+            "",                                     "#",                                                           "= h   when { n + 1 > 2 }\n  [stage]",       "  [n += 2 - 1]",
+            "  n2: int from 0 to 9",                "= i   when { n2 - n >= 0 and met }\n  [objective] [after h]", "  [carried += pelt] [n2 = n + 1]",          "  [stage] [after a, b]",
         };
 
         // One change to `text`: a byte replaced, cut or added, a line cut, doubled or moved, or the end cut off.
         fn change(s: *shakedown.Source, a: std.mem.Allocator, text: *std.ArrayList(u8)) !void {
             if (text.items.len == 0) return text.appendSlice(a, shakedown.gen.oneOf(s, []const u8, &pieces));
             const at = shakedown.gen.intRange(s, usize, 0, text.items.len - 1);
-            const alphabet = "=#·{}()[]^<>:,.-~*\" \nabcqrsxyz019_";
+            const alphabet = "=#·{}()[]^<>:,.+-~*\" \nabcqrsxyz019_";
             const byte = alphabet[shakedown.gen.intRange(s, usize, 0, alphabet.len - 1)];
             const start = if (std.mem.findScalarLast(u8, text.items[0..at], '\n')) |nl| nl + 1 else 0;
             const end = if (std.mem.findScalarPos(u8, text.items, at, '\n')) |nl| nl + 1 else text.items.len;
@@ -263,7 +279,33 @@ test "any text, a real quest changed or text of any kind, compiles or is refused
             }
         }
     }.one, .{ .cases = 600, .seed = 0xca4 });
+    // the property reaches the compiler, the runtime and cairn's quests, not only the reader's refusals
+    try std.testing.expect(seen > 60);
 }
+
+/// cairn's runtime over a story that compiled and was told: its block loaded and its quests stepped, as a game
+/// steps them. A block cairn's pass wrote that its loader refuses is a fault; what stepping names is the story's.
+const quests: tools.trial.Package = .{
+    .run = struct {
+        fn run(_: ?*anyopaque, l: *tools.walk.Loaded) error{ OutOfMemory, Refused }!void {
+            var owners: [facts.max_scopes]u64 = @splat(0);
+            var q = cairn.Quests.init(gpa, &l.story, l.memory.store(), &l.host, &owners, .{}) catch |e| {
+                if (e == error.OutOfMemory) return error.OutOfMemory;
+                if (refusedBlock(e)) return error.Refused;
+                return;
+            };
+            defer q.deinit();
+            for (0..8) |_| _ = q.step() catch return;
+        }
+
+        // A block the loader refuses, or a host it is not bound to: what cairn's pass and riverrun's walk wrote.
+        fn refusedBlock(e: cairn.Error) bool {
+            if (e == error.WrongVersion or e == error.NotThisStory or e == error.HostNotBound) return true;
+            inline for (@typeInfo(cairn.block.Error).error_set.error_names.?) |name| if (e == @field(cairn.Error, name)) return true;
+            return false;
+        }
+    }.run,
+};
 
 test "activation keys are the host's, and `follows` names shared rules" {
     var b = try build(

@@ -37,7 +37,7 @@ A quest is a riverrun section of kind `quest`, which cairn registers with riverr
 stages, its lines its journal, its tags typed by cairn's schema. Nothing new is parsed, so riverrun's reader, checker,
 line ids, translation and tools serve quests as they serve dialogue.
 
-```
+```river
 == the_stranger (quest)
   [title "Who was he?"] [scope player]
 facts (player):

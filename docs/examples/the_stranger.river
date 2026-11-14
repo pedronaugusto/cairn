@@ -1,0 +1,40 @@
+// The quest cairn's design shows, whole: the story's facts it reads, then the quest as the design writes it.
+facts:
+  met: bool   (game)
+  found: set of letter   (game)
+  said: set of gave   (game)
+  carried: set of his_name
+  hour: int   (clock)
+extern:
+  name(who: ref of person) -> text
+
+== the_stranger (quest)
+  [title "Who was he?"] [scope player]
+facts (player):
+  stranger: ref of person   (role)     // given by the host when the quest starts
+  asked: set of margaret, tom, danny
+
+= noticed      when { met }
+  [stage] [active spawn_stranger]
+  A man nobody knows stood at the foot of the coffin. ^q1a9
+= the_letter   when { found has letter }
+  [objective] [after noticed] [active pin_letter]
+  A letter signed "L.", from a city she never lived in. ^q1b2
+= the_hands    when { said has gave }
+  [objective] [optional] [after noticed]
+  He said the hands were the same. ^q1c4
+= named        when { the_letter and the_hands }
+  [outcome] [after the_letter]
+  [carried += his_name]
+  He was {name(stranger)}, her son, from a life she didn't live. ^q1d7
+= gone         when { hour >= 6 and not the_letter }
+  [fails]
+  He left before dawn. Nobody had his number. ^q1e3
+
+// what the rest of the story does with the quest's own facts: whom she asks
+== asking
+* Ask Margaret.
+  [the_stranger.asked += margaret]
+  -> end
+* Ask nobody.
+  -> end

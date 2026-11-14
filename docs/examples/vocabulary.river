@@ -1,0 +1,16 @@
+// The quest cairn's vocabulary describes: stages, their kinds and order, an activation key, and `since`.
+facts:
+  met: bool   (game)
+  found: set of letter   (game)
+  day: int   (clock)
+
+== the_stranger (quest)
+  [title "Who was he?"]
+facts:
+  stranger: ref of person   (role)
+= noticed      when { met }
+  [stage] [active spawn_stranger]
+= the_letter   when { found has letter }
+  [objective] [after noticed]
+= named        when { the_letter and since(noticed, day) < 3 }
+  [outcome] [after the_letter]
