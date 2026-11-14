@@ -11,42 +11,55 @@ extern:
 == everyone (quest rules)
 facts:
   giver: ref of person   (role)
-= abandoned    when { dead(giver) }                      # fails
-  Nobody else will pay for this: {name(giver)} is dead.  # id r1
+= abandoned    when { dead(giver) }
+  [fails]
+  Nobody else will pay for this: {name(giver)} is dead. ^r1
 
-== pelts (quest)                                         # start host · title "Ten pelts"
+== pelts (quest)
+  [start host] [title "Ten pelts"]
 facts:
   giver: ref of person   (role)
-= asked        when { true }                             # stage
-  Ten pelts before the frost.                            # id p1
-= brought      when { count(wolf_pelt) >= 10 }           # outcome · after asked
-  The pelts are hers.                                    # id p2
+= asked        when { true }
+  [stage]
+  Ten pelts before the frost. ^p1
+= brought      when { count(wolf_pelt) >= 10 }
+  [outcome] [after asked]
+  The pelts are hers. ^p2
 
-== ring (quest)                                          # start host
+== ring (quest)
+  [start host]
 facts:
   giver: ref of person   (role)
-= asked        when { true }                             # stage · active open_gate
-  Find the ring she lost.                                # id g1
-= found        when { has_ring }                         # outcome · after asked
-  The ring, in the mud by the gate.                      # id g2
+= asked        when { true }
+  [stage] [active open_gate]
+  Find the ring she lost. ^g1
+= found        when { has_ring }
+  [outcome] [after asked]
+  The ring, in the mud by the gate. ^g2
 
-== debt (quest)                                          # start host
+== debt (quest)
+  [start host]
 facts:
   giver: ref of person   (role)
-= owed         when { true }                             # stage
-  You owe him, and he means to collect.                  # id d1
-= abandoned    when { dead(giver) }                      # outcome · after owed
-  With him dead, nobody is owed anything.                # id d2
-= settled      when { debt_paid and not dead(giver) }    # outcome · after owed
-  Paid in full.                                          # id d3
+= owed         when { true }
+  [stage]
+  You owe him, and he means to collect. ^d1
+= abandoned    when { dead(giver) }
+  [outcome] [after owed]
+  With him dead, nobody is owed anything. ^d2
+= settled      when { debt_paid and not dead(giver) }
+  [outcome] [after owed]
+  Paid in full. ^d3
 
-== letter (quest)                                        # start host
-= sent         when { debt_paid }                        # outcome
-  The letter goes, and nobody is left to read it.        # id l1
+== letter (quest)
+  [start host]
+= sent         when { debt_paid }
+  [outcome]
+  The letter goes, and nobody is left to read it. ^l1
 
 == market
-* Pay what you owe.                                      # id m1
-  ~ debt_paid = true
+* Pay what you owe. ^m1
+  [debt_paid = true]
   -> end
-* Not today.                                             # id m2
+* Not today. ^m2
   -> end

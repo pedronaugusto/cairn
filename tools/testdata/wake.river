@@ -13,42 +13,49 @@ facts (life):
 extern:
   name(who: ref of person) -> text
 
-== the_stranger (quest)                                  # title "Who was he?" · scope player
+== the_stranger (quest)
+  [title "Who was he?"] [scope player]
 facts (player):
   stranger: ref of person   (role)
   asked: set of margaret, tom, danny
 
-= noticed      when { met }                              # stage · active spawn_stranger
-  A man nobody knows stood at the foot of the coffin.    # id q1a9
-= the_letter   when { found has letter }                 # objective · after noticed · active pin_letter
-  A letter signed "L.", from a city she never lived in.  # id q1b2
-= the_hands    when { said has hands }                   # objective · optional · after noticed
-  He said the hands were the same.                       # id q1c4
-= late         when { since(noticed, hour) >= 3 }        # stage · after noticed
-  It is late, and he has not gone.                       # id q1c9
-= named        when { the_letter and the_hands }         # outcome · after the_letter
-  ~ carried += his_name
-  He was {name(stranger)}, her son, from a life she didn't live.   # id q1d7
-= gone         when { hour >= 6 and not the_letter }     # fails
-  He left before dawn. Nobody had his number.            # id q1e3
+= noticed      when { met }
+  [stage] [active spawn_stranger]
+  A man nobody knows stood at the foot of the coffin. ^q1a9
+= the_letter   when { found has letter }
+  [objective] [after noticed] [active pin_letter]
+  A letter signed "L.", from a city she never lived in. ^q1b2
+= the_hands    when { said has hands }
+  [objective] [optional] [after noticed]
+  He said the hands were the same. ^q1c4
+= late         when { since(noticed, hour) >= 3 }
+  [stage] [after noticed]
+  It is late, and he has not gone. ^q1c9
+= named        when { the_letter and the_hands }
+  [outcome] [after the_letter]
+  [carried += his_name]
+  He was {name(stranger)}, her son, from a life she didn't live. ^q1d7
+= gone         when { hour >= 6 and not the_letter }
+  [fails]
+  He left before dawn. Nobody had his number. ^q1e3
 
 == wake
-At the back, a man nobody knows is crying harder than anyone.   # id w1
-~ met = true
-* Ask Margaret who he is.                                # id w2
-  MARGARET: I thought he was with you.                   # id w3
-  ~ the_stranger.asked += margaret
+At the back, a man nobody knows is crying harder than anyone. ^w1
+[met = true]
+* Ask Margaret who he is. ^w2
+  MARGARET: I thought he was with you. ^w3
+  [the_stranger.asked += margaret]
   -> drawer
-* Look at his hands.                                     # id w4
-  ~ said += hands
-  ~ carried += her_hands
-  He has her hands. The same hands.                      # id w5
+* Look at his hands. ^w4
+  [said += hands]
+  [carried += her_hands]
+  He has her hands. The same hands. ^w5
   -> drawer
 
 == drawer
-* Open the drawer.                                       # id w6
-  ~ found += letter
-  A letter, signed "L.".                                 # id w7
+* Open the drawer. ^w6
+  [found += letter]
+  A letter, signed "L.". ^w7
   -> end
-* Leave it.                                              # id w8
+* Leave it. ^w8
   -> end

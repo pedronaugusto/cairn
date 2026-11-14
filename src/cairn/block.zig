@@ -70,7 +70,7 @@ pub const Quest = struct {
     section: u32,
     /// Runs as many instances, each kept per a thing of the quest's own kind.
     repeat: bool,
-    /// Starts when a stage with no `after` is reached; false for `# start host` and for a repeat quest.
+    /// Starts when a stage with no `after` is reached; false for `[start host]` and for a repeat quest.
     starts_itself: bool,
     /// The facts cairn keeps for it: its status, its current stage, and for a repeat quest how many instances
     /// it has started.

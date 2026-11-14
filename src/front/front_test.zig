@@ -103,20 +103,25 @@ test "a stage is one kind, reached by its condition, its body its journal and it
         \\facts:
         \\  met: bool   (game)
         \\== q (quest)
-        \\= a   when { met }                  # stage · objective
-        \\= b   when { met }                  # outcome · live
-        \\= c   when { met }                  # stage · optional
-        \\= d                                 # stage
-        \\= e   when { met }                  # fails
+        \\= a   when { met }
+        \\  [stage] [objective]
+        \\= b   when { met }
+        \\  [outcome] [live]
+        \\= c   when { met }
+        \\  [stage] [optional]
+        \\= d
+        \\  [stage]
+        \\= e   when { met }
+        \\  [fails]
         \\  * Run.
         \\    -> end
     );
     defer b.deinit();
     try b.has(.err, 4, 3, "`a` is a stage, an objective, an outcome or a failure: mark it with one of `stage`, `objective`, `outcome` or `fails`");
-    try b.has(.err, 5, 3, "`b` ends the quest, which stays ended: an ending is never `live`");
-    try b.has(.err, 6, 3, "only an objective is `optional`: `c` is a stage");
-    try b.has(.err, 7, 3, "`d` is reached when its condition holds: `= d when { … }`");
-    try b.has(.err, 9, 3, "under a stage go its journal's lines and what reaching it does, `~ …`: nothing else");
+    try b.has(.err, 6, 3, "`b` ends the quest, which stays ended: an ending is never `live`");
+    try b.has(.err, 8, 3, "only an objective is `optional`: `c` is a stage");
+    try b.has(.err, 10, 3, "`d` is reached when its condition holds: `= d when { … }`");
+    try b.has(.err, 14, 3, "under a stage go its journal's lines and what reaching it does, `[…]`: nothing else");
 }
 
 test "`after` names stages of the quest and never goes round" {
@@ -124,19 +129,25 @@ test "`after` names stages of the quest and never goes round" {
         \\facts:
         \\  met: bool   (game)
         \\== q (quest)
-        \\= a   when { met }   # stage
-        \\= b   when { met }   # stage · after a, x
-        \\= c   when { met }   # outcome · after b
+        \\= a   when { met }
+        \\  [stage]
+        \\= b   when { met }
+        \\  [stage] [after a, x]
+        \\= c   when { met }
+        \\  [outcome] [after b]
     );
     defer b.deinit();
-    try b.only(.err, 5, 42, "`x` is not a stage of `q`");
+    try b.only(.err, 7, 21, "`x` is not a stage of `q`");
     var round = try build(
         \\facts:
         \\  met: bool   (game)
         \\== q (quest)
-        \\= a   when { met }   # stage · after c
-        \\= b   when { met }   # stage · after a
-        \\= c   when { met }   # outcome · after b
+        \\= a   when { met }
+        \\  [stage] [after c]
+        \\= b   when { met }
+        \\  [stage] [after a]
+        \\= c   when { met }
+        \\  [outcome] [after b]
     );
     defer round.deinit();
     try round.only(.err, 4, 3, "`a`'s `after` comes round to it again: what comes after what in `q` goes one way");
@@ -154,14 +165,15 @@ test "any quest's `after` is refused when it comes round, and only then" {
             try text.writer.writeAll("facts:\n  met: bool   (game)\n== q (quest)\n");
             for (after, 0..) |*row, i| {
                 row.* = try a.alloc(bool, n);
-                try text.writer.print("= s{d}   when {{ met }}   # {s}", .{ i, if (i == n - 1) "outcome" else "stage" });
+                try text.writer.print("= s{d}   when {{ met }}\n  [{s}]", .{ i, if (i == n - 1) "outcome" else "stage" });
                 var first = true;
                 for (row.*, 0..) |*edge, k| {
                     edge.* = shakedown.gen.intRange(case.source, u8, 0, 3) == 0;
                     if (!edge.*) continue;
-                    try text.writer.print("{s}s{d}", .{ if (first) " · after " else ", ", k });
+                    try text.writer.print("{s}s{d}", .{ if (first) " [after " else ", ", k });
                     first = false;
                 }
+                if (!first) try text.writer.writeByte(']');
                 try text.writer.writeByte('\n');
             }
             var b = try build(text.written());
@@ -169,7 +181,7 @@ test "any quest's `after` is refused when it comes round, and only then" {
             var named: ?usize = null;
             for (b.diags.list.items) |d| if (std.mem.find(u8, d.message, "comes round to it again") != null) {
                 try std.testing.expect(named == null);
-                named = b.at(d).line - 4; // the stages start on the fourth line
+                named = (b.at(d).line - 4) / 2; // the stages start on the fourth line, two lines each
             };
             if (named) |at| {
                 // the stage it names is on a cycle: it comes after itself
@@ -217,23 +229,20 @@ test "any text, a real quest changed or text of any kind, compiles or is refused
         }
 
         const pieces = [_][]const u8{
-            "facts:",                                "facts (player):",                      "  met: bool   (game)", "  n: int   (clock)",
-            "  who: ref of person   (role)",         "  got: set of a, b",                   "== q (quest)",         "== r (quest)   # follows q",
-            "== shared (rules)",                     "= a   when { met }   # stage",
-            "= b   when { met }   # outcome · after a",
-            "= c   when { n > 2 }   # objective · optional",
-            "= d   when { met }   # fails · live",
-            "= e   # stage · after e, f",
-            "  * Run.",                              "  ~ met = true",                       "    -> end",           "~ activate spawn_stranger",
-            "= f   when { since(a) > 1 }   # stage", "= g   when { before(b) }   # outcome", "cast:",                "  tom  \"Tom\"",
-            "extern:",                               "  name(who: ref of person) -> text",   "",                     "#",
+            "facts:",                               "facts (player):",               "  met: bool   (game)",                      "  n: int   (clock)",
+            "  who: ref of person   (role)",        "  got: set of a, b",            "== q (quest)",                              "== r (quest)\n  [follows q]",
+            "== shared (rules)",                    "= a   when { met }\n  [stage]", "= b   when { met }\n  [outcome] [after a]", "= c   when { n > 2 }\n  [objective] [optional]",
+            "= d   when { met }\n  [fails] [live]", "= e\n  [stage] [after e, f]",   "  * Run.",                                  "  [met = true]",
+            "    -> end",                           "[activate spawn_stranger]",     "= f   when { since(a) > 1 }\n  [stage]",    "= g   when { before(b) }\n  [outcome]",
+            "cast:",                                "  tom  \"Tom\"",                "extern:",                                   "  name(who: ref of person) -> text",
+            "",                                     "#",
         };
 
         // One change to `text`: a byte replaced, cut or added, a line cut, doubled or moved, or the end cut off.
         fn change(s: *shakedown.Source, a: std.mem.Allocator, text: *std.ArrayList(u8)) !void {
             if (text.items.len == 0) return text.appendSlice(a, shakedown.gen.oneOf(s, []const u8, &pieces));
             const at = shakedown.gen.intRange(s, usize, 0, text.items.len - 1);
-            const alphabet = "=#·{}()<>:,.-~*\" \nabcqrsxyz019_";
+            const alphabet = "=#·{}()[]^<>:,.-~*\" \nabcqrsxyz019_";
             const byte = alphabet[shakedown.gen.intRange(s, usize, 0, alphabet.len - 1)];
             const start = if (std.mem.findScalarLast(u8, text.items[0..at], '\n')) |nl| nl + 1 else 0;
             const end = if (std.mem.findScalarPos(u8, text.items, at, '\n')) |nl| nl + 1 else text.items.len;
@@ -260,31 +269,35 @@ test "activation keys are the host's, and `follows` names shared rules" {
     var b = try build(
         \\facts:
         \\  met: bool   (game)
-        \\== q (quest)                 # follows a, nobody
-        \\= seen   when { met }        # outcome · active spawn, spwan
+        \\== q (quest)
+        \\  [follows a, nobody]
+        \\= seen   when { met }
+        \\  [outcome] [active spawn, spwan]
         \\== a
         \\-> end
     );
     defer b.deinit();
-    try b.has(.err, 4, 57, "the host has no activation key `spwan`");
-    try b.has(.err, 3, 40, "`a` is not `(quest rules)`");
-    try b.has(.err, 3, 43, "`nobody` is not a section");
+    try b.has(.err, 6, 28, "the host has no activation key `spwan`");
+    try b.has(.err, 4, 12, "`a` is not `(quest rules)`");
+    try b.has(.err, 4, 15, "`nobody` is not a section");
 }
 
 test "a quest's facts are kept in the scope its stages are" {
     var b = try build(
         \\facts:
         \\  met: bool   (game)
-        \\== q (quest)          # scope player
+        \\== q (quest)
+        \\  [scope player]
         \\facts (life):
         \\  asked: bool
-        \\= seen   when { met and asked }    # outcome
+        \\= seen   when { met and asked }
+        \\  [outcome]
         \\== a
-        \\~ q.asked = true
+        \\[q.asked = true]
         \\-> end
     );
     defer b.deinit();
-    try b.only(.err, 5, 3, "`q`'s facts are saved with its stages: declare them `facts (player):`, the scope its `scope` names");
+    try b.only(.err, 6, 3, "`q`'s facts are saved with its stages: declare them `facts (player):`, the scope its `scope` names");
 }
 
 test "two endings that can hold at once are refused, where it can be decided" {
@@ -294,13 +307,16 @@ test "two endings that can hold at once are refused, where it can be decided" {
         \\  told: bool   (game)
         \\  hour: int    (game)
         \\== q (quest)
-        \\= named   when { met and told }          # outcome
-        \\= gone    when { met }                   # fails
-        \\= late    when { hour > 3 and not met }  # fails
+        \\= named   when { met and told }
+        \\  [outcome]
+        \\= gone    when { met }
+        \\  [fails]
+        \\= late    when { hour > 3 and not met }
+        \\  [fails]
     );
     defer b.deinit();
     // `late` against `named` and `gone` cannot hold: it is never said
-    try b.only(.err, 7, 3, "`named` and `gone` can hold at once, and a quest ends once: make their conditions exclusive");
+    try b.only(.err, 8, 3, "`named` and `gone` can hold at once, and a quest ends once: make their conditions exclusive");
 }
 
 test "a quest that can get stuck is refused, with the way there" {
@@ -309,14 +325,16 @@ test "a quest that can get stuck is refused, with the way there" {
         \\  dead: bool
         \\  asked: bool
         \\== q (quest)
-        \\= met     when { asked }                # stage
-        \\= saved   when { met and not dead }     # outcome
+        \\= met     when { asked }
+        \\  [stage]
+        \\= saved   when { met and not dead }
+        \\  [outcome]
         \\== a
         \\* Ask.
-        \\  ~ asked = true
+        \\  [asked = true]
         \\  -> end
         \\* Kill him.
-        \\  ~ dead = true
+        \\  [dead = true]
         \\  -> end
     );
     defer b.deinit();
@@ -327,15 +345,18 @@ test "a quest that can get stuck is refused, with the way there" {
         \\  dead: bool
         \\  asked: bool
         \\== q (quest)
-        \\= met     when { asked }                # stage
-        \\= saved   when { met and not dead }     # outcome
-        \\= lost    when { dead }                 # fails
+        \\= met     when { asked }
+        \\  [stage]
+        \\= saved   when { met and not dead }
+        \\  [outcome]
+        \\= lost    when { dead }
+        \\  [fails]
         \\== a
         \\* Ask.
-        \\  ~ asked = true
+        \\  [asked = true]
         \\  -> end
         \\* Kill him.
-        \\  ~ dead = true
+        \\  [dead = true]
         \\  -> end
     );
     defer fixed.deinit();
@@ -347,15 +368,17 @@ test "a stage nothing can reach is said, and a quest that never ends" {
         \\facts:
         \\  lit: bool
         \\== q (quest)
-        \\= dark    when { not lit }   # stage
-        \\= bright  when { lit }       # stage
+        \\= dark    when { not lit }
+        \\  [stage]
+        \\= bright  when { lit }
+        \\  [stage]
         \\== a
-        \\~ lit = false
+        \\[lit = false]
         \\-> end
     );
     defer b.deinit();
     try b.has(.warning, 3, 4, "`q` has no outcome and no failure, so it never ends");
-    try b.has(.warning, 5, 3, "`bright` can never be reached: nothing the story does makes its condition hold");
+    try b.has(.warning, 6, 3, "`bright` can never be reached: nothing the story does makes its condition hold");
     try std.testing.expectEqual(@as(usize, 0), b.diags.errors());
 }
 
@@ -364,9 +387,12 @@ test "live stages that read each other round are refused" {
         \\facts:
         \\  lamp: bool   (game)
         \\== q (quest)
-        \\= lit      when { lamp and not shadow }   # stage · live
-        \\= shadow   when { lit }                   # stage · live
-        \\= done     when { lamp }                  # outcome
+        \\= lit      when { lamp and not shadow }
+        \\  [stage] [live]
+        \\= shadow   when { lit }
+        \\  [stage] [live]
+        \\= done     when { lamp }
+        \\  [outcome]
     );
     defer b.deinit();
     try b.has(.err, 4, 3, "`lit` is live and its condition comes back to it through other stages': they could keep changing each other for ever");
@@ -380,14 +406,16 @@ test "a shared stage is inherited by every quest with its roles, of their kinds"
         \\== everyone (quest rules)
         \\facts:
         \\  giver: ref of person   (role)
-        \\= abandoned   when { dead(giver) }   # fails
+        \\= abandoned   when { dead(giver) }
+        \\  [fails]
         \\== pelts (quest)
         \\facts:
         \\  giver: ref of place   (role)
-        \\= done   when { met }   # outcome
+        \\= done   when { met }
+        \\  [outcome]
     );
     defer b.deinit();
-    try b.only(.err, 8, 4, "`pelts` inherits `abandoned` from `everyone`, whose `giver` is not the same kind of thing as its own");
+    try b.only(.err, 9, 4, "`pelts` inherits `abandoned` from `everyone`, whose `giver` is not the same kind of thing as its own");
 }
 
 test "a watched condition asks only queries that say what they read" {
@@ -395,7 +423,8 @@ test "a watched condition asks only queries that say what they read" {
         \\extern:
         \\  gold() -> int
         \\== q (quest)
-        \\= rich   when { gold() > 100 }   # outcome
+        \\= rich   when { gold() > 100 }
+        \\  [outcome]
     );
     defer b.deinit();
     try b.only(.err, 4, 17, "`gold` is asked by a watched condition, which wakes only when what it reads changes: declare what it reads, `(reads …)`");
@@ -468,9 +497,12 @@ test "a live stage follows its condition, and the current stage falls back when 
         \\  lamp: bool   (game)
         \\  out:  bool   (game)
         \\== cellar (quest)
-        \\= entered   when { lamp or out }        # stage
-        \\= carrying  when { lamp }               # objective · live · after entered · active pin
-        \\= left      when { out }                # outcome
+        \\= entered   when { lamp or out }
+        \\  [stage]
+        \\= carrying  when { lamp }
+        \\  [objective] [live] [after entered] [active pin]
+        \\= left      when { out }
+        \\  [outcome]
     , .{});
     defer p.deinit();
     const i = p.quest("cellar");
@@ -494,8 +526,10 @@ test "two endings reached in one step, where the checker could not tell, are a n
         \\facts:
         \\  hour: int   (game)
         \\== night (quest)
-        \\= dawn    when { hour > 5 }   # outcome
-        \\= lost    when { hour > 4 }   # fails
+        \\= dawn    when { hour > 5 }
+        \\  [outcome]
+        \\= lost    when { hour > 4 }
+        \\  [fails]
     , .{});
     defer p.deinit();
     try p.set("hour", .{ .int = 9 });
@@ -505,9 +539,9 @@ test "two endings reached in one step, where the checker could not tell, are a n
 test "a step reaches stages to a fixed point, bounded by a named error" {
     var text: std.Io.Writer.Allocating = .init(gpa);
     defer text.deinit();
-    try text.writer.writeAll("facts:\n  go: bool   (game)\n== long (quest)\n= s0   when { go }   # stage\n");
-    for (1..cairn.max_rounds + 1) |k| try text.writer.print("= s{d}   when {{ s{d} }}   # stage\n", .{ k, k - 1 });
-    try text.writer.print("= done   when {{ s{d} }}   # outcome\n", .{cairn.max_rounds});
+    try text.writer.writeAll("facts:\n  go: bool   (game)\n== long (quest)\n= s0   when { go }\n  [stage]\n");
+    for (1..cairn.max_rounds + 1) |k| try text.writer.print("= s{d}   when {{ s{d} }}\n  [stage]\n", .{ k, k - 1 });
+    try text.writer.print("= done   when {{ s{d} }}\n  [outcome]\n", .{cairn.max_rounds});
     var p: Played = undefined;
     try p.init(text.written(), .{});
     defer p.deinit();
@@ -521,9 +555,12 @@ test "a budget changes when stages are reached, never what" {
         \\facts:
         \\  go: bool   (game)
         \\== q (quest)
-        \\= a   when { go }   # stage
-        \\= b   when { go }   # stage
-        \\= c   when { a and b }   # outcome
+        \\= a   when { go }
+        \\  [stage]
+        \\= b   when { go }
+        \\  [stage]
+        \\= c   when { a and b }
+        \\  [outcome]
     , .{ .budget = 1 });
     defer p.deinit();
     const i = p.quest("q");
@@ -542,9 +579,12 @@ test "a stage keeps its keys from it until the quest ends" {
         \\  told: bool  (game)
         \\  done: bool  (game)
         \\== q (quest)
-        \\= a   when { met }    # stage · keeps pin
-        \\= b   when { told }   # stage · active spawn · after a
-        \\= c   when { done }   # outcome
+        \\= a   when { met }
+        \\  [stage] [keeps pin]
+        \\= b   when { told }
+        \\  [stage] [active spawn] [after a]
+        \\= c   when { done }
+        \\  [outcome]
     , .{});
     defer p.deinit();
     try p.set("met", .{ .boolean = true });
@@ -564,21 +604,30 @@ const before_patch =
     \\facts (life):
     \\  met: bool   (game)
     \\  seen_it: bool   (game)
-    \\== q (quest)          # scope life
-    \\= noticed  when { met }              # stage
-    \\= found    when { met and seen_it }  # stage · after noticed
-    \\= done     when { found }            # outcome · after found
+    \\== q (quest)
+    \\  [scope life]
+    \\= noticed  when { met }
+    \\  [stage]
+    \\= found    when { met and seen_it }
+    \\  [stage] [after noticed]
+    \\= done     when { found }
+    \\  [outcome] [after found]
 ;
 
 const after_patch =
     \\facts (life):
     \\  met: bool   (game)
     \\  seen_it: bool   (game)
-    \\== q (quest)          # scope life
-    \\= noticed   when { met }                 # stage
-    \\= found     when { met }                 # stage · after noticed
-    \\= recalled  when { met }                 # stage · after noticed
-    \\= done      when { found and recalled }  # outcome · after found
+    \\== q (quest)
+    \\  [scope life]
+    \\= noticed   when { met }
+    \\  [stage]
+    \\= found     when { met }
+    \\  [stage] [after noticed]
+    \\= recalled  when { met }
+    \\  [stage] [after noticed]
+    \\= done      when { found and recalled }
+    \\  [outcome] [after found]
 ;
 
 test "a save survives a patch: a stage whose condition now holds is reached at the first step" {
@@ -610,8 +659,10 @@ test "a quest that starts itself, restored before it started, still starts itsel
     try p.init(
         \\facts (life):
         \\  met: bool   (game)
-        \\== q (quest)      # scope life
-        \\= seen   when { met }   # outcome
+        \\== q (quest)
+        \\  [scope life]
+        \\= seen   when { met }
+        \\  [outcome]
     , .{});
     defer p.deinit();
     _ = try p.quests.step();
@@ -627,8 +678,10 @@ test "the story's dependency index finds the stages that read a fact" {
         \\facts:
         \\  met: bool   (game)
         \\== q (quest)
-        \\= a   when { met }   # stage
-        \\= b   when { a }     # outcome
+        \\= a   when { met }
+        \\  [stage]
+        \\= b   when { a }
+        \\  [outcome]
     , .{});
     defer p.deinit();
     const readers = p.quests.readers(p.fact("met"));

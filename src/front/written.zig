@@ -4,16 +4,20 @@
 //! What a quest declares, what cairn's judges hold a tag to and what the
 //! reader makes of a checked story all start here, so the three agree.
 //!
-//!     == the_stranger (quest)                  # title "Who was he?" · scope player
+//!     == the_stranger (quest)
+//!       [title "Who was he?"] [scope player]
 //!     facts (player):
 //!       stranger: ref of person   (role)
-//!     = noticed   when { met }                 # stage
-//!     = gone      when { hour >= 6 }           # fails
+//!     = noticed   when { met }
+//!       [stage]
+//!     = gone      when { hour >= 6 }
+//!       [fails]
 //!
 //!     == everyone (quest rules)
 //!     facts:
 //!       giver: ref of person   (role)
-//!     = abandoned   when { not alive(giver) }  # fails
+//!     = abandoned   when { not alive(giver) }
+//!       [fails]
 
 const std = @import("std");
 const riverrun = @import("riverrun-compiler");
@@ -112,7 +116,7 @@ pub fn part(s: *const ast.Section, name: []const u8) ?*const ast.Subsection {
 pub const Inherited = struct { rules: *const ast.Section, part: *const ast.Subsection };
 
 /// The stages `q` inherits from the story's shared rules: each part of a `(quest rules)` section in its module or
-/// the root whose condition reads roles `q` has every one of, or of one `q` follows (`# follows name`), and
+/// the root whose condition reads roles `q` has every one of, or of one `q` follows (`[follows name]`), and
 /// that `q` does not say otherwise of with a stage of its own name.
 pub fn inherited(a: std.mem.Allocator, files: []const ast.File, q: *const ast.Section) error{OutOfMemory}![]const Inherited {
     var out: std.ArrayList(Inherited) = .empty;
@@ -260,9 +264,12 @@ test "a part's kind is its one mark" {
     var diags: riverrun.syntax.Diagnostics = .{};
     defer diags.deinit(std.testing.allocator);
     const f = try riverrun.syntax.parse(arena.allocator(), std.testing.allocator, &diags, 0, "a.river",
-        \\== q (quest)   # repeat
-        \\= a   when { since(a, day) > 3 and before(a, b) }   # stage
-        \\= b   when { since(a, day) > 4 }   # outcome · stage
+        \\== q (quest)
+        \\  [repeat]
+        \\= a   when { since(a, day) > 3 and before(a, b) }
+        \\  [stage]
+        \\= b   when { since(a, day) > 4 }
+        \\  [outcome] [stage]
         \\= c
     );
     const q = &f.sections[0];

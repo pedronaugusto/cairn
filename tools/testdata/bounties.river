@@ -8,21 +8,26 @@ facts (world):
 extern:
   name(who: ref of person) -> text
 
-== bounty (quest)                                        # repeat · scope world · title "A bounty"
+== bounty (quest)
+  [repeat] [scope world] [title "A bounty"]
 facts (world):
   target: ref of person   (role)
   tracked: bool
-= posted       when { true }                             # stage · active pin_target
-  A price on {name(target)}.                             # id b1
-= tracking     when { tracked }                          # objective · after posted
-  You have their trail.                                  # id b2
-= claimed      when { dead(target) }                     # outcome · after posted
-  ~ gold += 50
-  Paid.                                                  # id b3
-= expired      when { since(posted, day) > 3 and not dead(target) }   # fails
-  The board took the notice down.                        # id b4
+= posted       when { true }
+  [stage] [active pin_target]
+  A price on {name(target)}. ^b1
+= tracking     when { tracked }
+  [objective] [after posted]
+  You have their trail. ^b2
+= claimed      when { dead(target) }
+  [outcome] [after posted]
+  [gold += 50]
+  Paid. ^b3
+= expired      when { since(posted, day) > 3 and not dead(target) }
+  [fails]
+  The board took the notice down. ^b4
 
 == trail
-You find their tracks.                                   # id t1
-~ bounty.tracked(lead) = true
+You find their tracks. ^t1
+[bounty.tracked(lead) = true]
 -> end

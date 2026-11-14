@@ -4,12 +4,16 @@
 //! quest is a section whose parts are its stages, whose own facts are its
 //! facts and its roles, and whose lines are its journal.
 //!
-//!     == the_stranger (quest)                                 # title "Who was he?"
+//!     == the_stranger (quest)
+//!       [title "Who was he?"]
 //!     facts:
 //!       stranger: ref of person   (role)
-//!     = noticed      when { met }                             # stage · active spawn_stranger
-//!     = the_letter   when { found has letter }                # objective · after noticed
-//!     = named        when { the_letter and since(noticed, day) < 3 }   # outcome · after the_letter
+//!     = noticed      when { met }
+//!       [stage] [active spawn_stranger]
+//!     = the_letter   when { found has letter }
+//!       [objective] [after noticed]
+//!     = named        when { the_letter and since(noticed, day) < 3 }
+//!       [outcome] [after the_letter]
 //!
 //! A stage's name is true once it is reached, so stages compose without
 //! flags of their own, and `since` and `before` count from them and order

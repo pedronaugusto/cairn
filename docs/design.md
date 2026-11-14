@@ -38,25 +38,32 @@ stages, its lines its journal, its tags typed by cairn's schema. Nothing new is 
 line ids, translation and tools serve quests as they serve dialogue.
 
 ```
-== the_stranger (quest)                                  # title "Who was he?" · scope player
+== the_stranger (quest)
+  [title "Who was he?"] [scope player]
 facts (player):
-  stranger: ref of person   (role)                       // given by the host when the quest starts
+  stranger: ref of person   (role)     // given by the host when the quest starts
   asked: set of margaret, tom, danny
 
-= noticed      when { met }                              # stage · active spawn_stranger
-  A man nobody knows stood at the foot of the coffin.    # id q1a9
-= the_letter   when { found has letter }                 # objective · after noticed · active pin_letter
-  A letter signed "L.", from a city she never lived in.  # id q1b2
-= the_hands    when { said has gave }                    # objective · optional · after noticed
-  He said the hands were the same.                       # id q1c4
-= named        when { the_letter and the_hands }         # outcome · after the_letter
-  ~ carried += his_name
-  He was {name(stranger)}, her son, from a life she didn't live.   # id q1d7
-= gone         when { hour >= 6 and not the_letter }     # fails
-  He left before dawn. Nobody had his number.            # id q1e3
+= noticed      when { met }
+  [stage] [active spawn_stranger]
+  A man nobody knows stood at the foot of the coffin. ^q1a9
+= the_letter   when { found has letter }
+  [objective] [after noticed] [active pin_letter]
+  A letter signed "L.", from a city she never lived in. ^q1b2
+= the_hands    when { said has gave }
+  [objective] [optional] [after noticed]
+  He said the hands were the same. ^q1c4
+= named        when { the_letter and the_hands }
+  [outcome] [after the_letter]
+  [carried += his_name]
+  He was {name(stranger)}, her son, from a life she didn't live. ^q1d7
+= gone         when { hour >= 6 and not the_letter }
+  [fails]
+  He left before dawn. Nobody had his number. ^q1e3
 ```
 
-- **Stages** are parts tagged `stage`, `objective`, `outcome` or `fails`. A part's name is true in another
+- **Stages** are parts tagged `[stage]`, `[objective]`, `[outcome]` or `[fails]`, the tags in brackets under the
+  part's heading, with the stage's effects after them (`[carried += his_name]`). A part's name is true in another
   condition once it is reached, so stages compose without flags of their own.
 - **`when`** is the condition that reaches it, over the story's facts, the quest's own facts and roles, other quests
   (`the_stranger.named`) and the host's queries. **`after`** orders stages for the journal and for analysis; it
@@ -69,10 +76,10 @@ facts (player):
 - **Order:** `before(a, b)` holds once stage `a` was reached while `b` was not; reached in the same step, neither
   came first. cairn latches it when `a` is reached, so "you told her before he found out" needs no arithmetic.
 - **Shared rules.** A `(quest rules)` section's stages are inherited by every quest of its module (or of any, from
-  the root) that has every role the stage reads, of the same kind: `= abandoned when { dead(giver) } # fails`,
-  written once for every quest with a `giver`. Its roles are its own `(role)` facts, read as each quest's. A stage
-  that reads no role is inherited by the quests that follow the section by tag, `# follows everyone`. A quest that
-  writes a stage of the same name says otherwise, and keeps its own. Shared stages read roles and the story's
+  the root) that has every role the stage reads, of the same kind: `= abandoned when { dead(giver) }`, `[fails]`
+  under it, written once for every quest with a `giver`. Its roles are its own `(role)` facts, read as each quest's.
+  A stage that reads no role is inherited by the quests that follow the section by tag, `[follows everyone]`. A
+  quest that writes a stage of the same name says otherwise, and keeps its own. Shared stages read roles and the story's
   facts; `since` and `before` count from a quest's own. *Protects:* a thousand quests that do not each restate what
   the world means.
 - **Reached is kept.** Once reached, a stage stays reached (its fact latches), unless it is tagged `live`: then it
@@ -90,19 +97,19 @@ facts (player):
 - **Effects** under a stage are emitted when it is reached: rewards, changes to facts, actions. cairn applies none.
 - **Journal entries** are a stage's lines, with stable ids, translated and voiced like dialogue.
 - **A quest's own facts** are riverrun's: a `facts:` block under its heading, named within it (`asked` inside,
-  `the_stranger.asked` outside), kept in the scope its `# scope` names, where its stages are, so they save together.
+  `the_stranger.asked` outside), kept in the scope its `[scope …]` names, where its stages are, so they save together.
 - **Roles** are its own facts marked `(role)`, usually `ref`s, opaque handles the host owns (an entity, an item, a
   place), given when the quest starts and never set by the story; at most 16. Its conditions read them as constants,
   so `dead(giver)` wakes when that giver dies and no other. **Instances:** a quest tagged `repeat` can run as many
   instances, each kept per a thing of the quest's own kind (`ref of bounty`), numbered by cairn from 1: every fact
   it declares is kept per instance, read inside it for the one being evaluated, `bounty.tracked(lead)` from outside.
   Others run once.
-- **Activation** is tags on stages: `# active spawn_stranger, pin_letter` keeps those keys in the active set while
+- **Activation** is tags on stages: `[active spawn_stranger, pin_letter]` keeps those keys in the active set while
   the stage is the quest's current one, the stage reached last (falling back to the last written still reached when
-  a live one leaves); `# keeps key` keeps one from that stage until the quest ends. A key is one of the host's
+  a live one leaves); `[keeps key]` keeps one from that stage until the quest ends. A key is one of the host's
   things of the kind `activation`, checked against its manifest where it lists them and resolved to its handle at
   load.
-- **Starting** is a stage with no `after` whose condition holds, or the host's `start(quest, roles)`; `# start host`
+- **Starting** is a stage with no `after` whose condition holds, or the host's `start(quest, roles)`; `[start host]`
   leaves it to the host alone, and a repeat quest is only ever started by the host. A quest that starts itself and
   has roles is listed (`unbound`) so the host can give them first (`bind`); until then it is not watched.
 

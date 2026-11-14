@@ -197,7 +197,7 @@ const Reader = struct {
         if (optional and kind != .objective) try r.problem(p.name.span, "only an objective is `optional`: `{s}` is a {s}", .{ p.name.text, @tagName(kind) });
         if (p.when == null) try r.problem(p.name.span, "`{s}` is reached when its condition holds: `= {s} when {{ … }}`", .{ p.name.text, p.name.text });
         for (p.body) |st| if (!journal(st)) {
-            try r.problem(st.span, "under a stage go its journal's lines and what reaching it does, `~ …`: nothing else", .{});
+            try r.problem(st.span, "under a stage go its journal's lines and what reaching it does, `[…]`: nothing else", .{});
             break;
         };
         return .{

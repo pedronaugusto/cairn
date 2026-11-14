@@ -40,15 +40,15 @@ fn generate(gpa: std.mem.Allocator, size: Size) ![]u8 {
     try w.writeAll("extern:\n  count(kind: ref of item_kind) -> int   (reads stock(kind))\n");
     var seed: u64 = 1;
     for (0..size.quests) |q| {
-        try w.print("== q{d} (quest)   # start host\n", .{q});
+        try w.print("== q{d} (quest)\n  [start host]\n", .{q});
         for (0..size.stages) |k| {
             const a = next(&seed) % size.facts;
             const b = next(&seed) % size.facts;
             const item = next(&seed) % size.items;
             const kind = if (k + 1 == size.stages) "outcome" else "stage";
             if (k == 0) {
-                try w.print("= s0   when {{ f{d} and f{d} and count(item_{d}) >= 3 }}   # stage\n", .{ a, b, item });
-            } else try w.print("= s{d}   when {{ s{d} and f{d} and f{d} and count(item_{d}) >= 3 }}   # {s} · after s{d}\n", .{ k, k - 1, a, b, item, kind, k - 1 });
+                try w.print("= s0   when {{ f{d} and f{d} and count(item_{d}) >= 3 }}\n  [stage]\n", .{ a, b, item });
+            } else try w.print("= s{d}   when {{ s{d} and f{d} and f{d} and count(item_{d}) >= 3 }}\n  [{s}] [after s{d}]\n", .{ k, k - 1, a, b, item, kind, k - 1 });
         }
     }
     return out.toOwnedSlice();
@@ -247,12 +247,16 @@ fn instances(gpa: std.mem.Allocator, io: std.Io, w: *std.Io.Writer, n: usize) !v
         \\facts (world):
         \\  closed: bool   (game)
         \\  dead(person): bool   (game)
-        \\== bounty (quest)   # repeat · scope world
+        \\== bounty (quest)
+        \\  [repeat] [scope world]
         \\facts (world):
         \\  target: ref of person   (role)
-        \\= posted    when { true }                         # stage
-        \\= closed_   when { closed }                       # outcome · after posted
-        \\= claimed   when { dead(target) and not closed }  # outcome · after posted
+        \\= posted    when { true }
+        \\  [stage]
+        \\= closed_   when { closed }
+        \\  [outcome] [after posted]
+        \\= claimed   when { dead(target) and not closed }
+        \\  [outcome] [after posted]
     );
     try c.compile();
     c.story = riverrun.story.Story.init(c.compiled.?.graph, .{}) catch return error.Story;
