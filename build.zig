@@ -88,6 +88,59 @@ const documented = struct {
     const documents = [_][]const u8{ "docs/design.md", "src/front/written.zig", "src/front/vocabulary.zig" };
 };
 
+/// What `riverrun play` writes for the design's quest under `tools/testdata/the_stranger.play`.
+const the_stranger_played =
+    \\> :set name(stranger) = "Tom"
+    \\! roles the_stranger
+    \\  stranger = stranger, standing in for the game's
+    \\== asking
+    \\* 1 Ask Margaret.
+    \\* 2 Ask nobody.
+    \\> :set met = true
+    \\! started the_stranger
+    \\! reached the_stranger.noticed
+    \\  A man nobody knows stood at the foot of the coffin.
+    \\! active spawn_stranger
+    \\* 1 Ask Margaret.
+    \\* 2 Ask nobody.
+    \\> :set found += letter
+    \\! reached the_stranger.the_letter
+    \\  A letter signed "L.", from a city she never lived in.
+    \\! inactive spawn_stranger
+    \\! active pin_letter
+    \\* 1 Ask Margaret.
+    \\* 2 Ask nobody.
+    \\> :facts the_stranger.noticed the_stranger.the_letter
+    \\  the_stranger.noticed = true
+    \\  the_stranger.the_letter = true
+    \\> :set said += gave
+    \\? name(stranger) = "Tom"
+    \\! reached the_stranger.the_hands
+    \\  He said the hands were the same.
+    \\! inactive pin_letter
+    \\! reached the_stranger.named
+    \\  He was Tom, her son, from a life she didn't live.
+    \\  [carried += his_name]
+    \\! ended the_stranger.named
+    \\* 1 Ask Margaret.
+    \\* 2 Ask nobody.
+    \\> 1
+    \\[the_stranger.asked += margaret]
+    \\-> end
+    \\> :facts
+    \\  met = true
+    \\  found = letter
+    \\  said = gave
+    \\  carried = his_name
+    \\  the_stranger.stranger = stranger
+    \\  the_stranger.asked = margaret
+    \\  the_stranger.noticed = true
+    \\  the_stranger.the_letter = true
+    \\  the_stranger.the_hands = true
+    \\  the_stranger.named = true
+    \\
+;
+
 fn docs(b: *std.Build, test_step: *std.Build.Step) ?void {
     const package = b.dependency("cairn", riverrun.building(b));
     const river = b.dependency("riverrun", riverrun.building(b));
@@ -96,6 +149,15 @@ fn docs(b: *std.Build, test_step: *std.Build.Step) ?void {
         .packages = &.{.{ .name = "cairn-compiler", .module = compiler(package) orelse return null }},
     });
     for (documented.stories) |story| test_step.dependOn(&riverrun.addCheck(b, program, &.{package.path(story)}, .{}).step);
+    // the design's quest played as a game plays it, its runtime run: the transcript pinned
+    const played = b.addRunArtifact(program);
+    played.addArgs(&.{ "play", "--set", "name(stranger) = \"Tom\"", "--script" });
+    played.addFileArg2(package.path("tools/testdata/the_stranger.play"), .{});
+    played.addFileArg2(package.path("docs/examples/the_stranger.river"), .{});
+    played.setStdIn(.{ .bytes = "" });
+    played.expectExitCode(0);
+    played.expectStdOutEqual(the_stranger_played);
+    test_step.dependOn(&played.step);
     const excerpts = riverrun.addExcerptsTest(b, river, .{ .package = package.builder, .stories = &documented.stories, .documents = &documented.documents }) orelse return null;
     test_step.dependOn(&b.addRunArtifact(excerpts).step);
 }

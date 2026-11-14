@@ -1,0 +1,7 @@
+// The design's quest played: the stranger is met, the letter found, his hands spoken of, and Margaret asked.
+:set met = true
+:set found += letter
+:facts the_stranger.noticed the_stranger.the_letter
+:set said += gave
+1
+:facts

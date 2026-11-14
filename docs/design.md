@@ -175,6 +175,20 @@ status · reached · current · role · started · activeSet · journal(instance
 Built, with the named errors `TwoEndings`, `NoFixedPoint`, `TooManyInstances`, `WrongRoles`, `AlreadyStarted` and
 `HostNotBound`.
 
+## Played without the game
+
+`riverrun play` runs a story's quests as a game does: `cairn.package` carries cairn's runtime for riverrun's
+tools (`running`, in `src/front/running.zig`), which starts `Quests` over the played story's facts, steps it
+whenever they change, and says what each step did: `! started the_stranger`, `! reached the_stranger.noticed`
+with the stage's journal lines and its effects (which the play applies, as a game would), `! left`, `! ended` or
+`! failed` at the ending stage, `! active` and `! inactive` for its activation keys. Its builtins answer the
+story's own `since` and `before`, and a query's answer the player sets is bumped as the game bumps its stamp. A
+quest that starts itself and has roles is given what the game would give it, a stand-in thing for each role, named
+for the role (`stranger`), which the player names in `:set name(stranger) = "Tom"`. A quest the host starts
+(`[start host]`, a repeat quest) is not started by the play: the game decides when.
+
+Built.
+
 ## How the host answers
 
 A quest reaches the game's state through riverrun's host binding, which cairn uses as it is:

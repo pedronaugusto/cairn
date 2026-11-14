@@ -78,4 +78,5 @@ pub const package: riverrun.Package = .{
     .kinds = &.{ quest, rules },
     .check = .{ .run = pass.check },
     .compile = .{ .name = "cairn", .run = pass.compile },
+    .running = @import("running.zig").running,
 };

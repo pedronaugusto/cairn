@@ -188,7 +188,9 @@ fn deinitRuns(q: *Quests) void {
 /// What a builtin's answer reads: the plan, the facts and the story.
 pub const Answers = struct { loaded: *const load_.Loaded, store: facts.Store, story: *const story_.Story };
 
-fn builtins(q: *const Quests) run.Builtins {
+/// What answers cairn's builtins (`since`, `before`) in the story's own conditions and words, for a session that
+/// tells a story whose scenes read them.
+pub fn builtins(q: *const Quests) run.Builtins {
     return .{ .user = q.answers, .call = answer };
 }
 

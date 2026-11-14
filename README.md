@@ -16,6 +16,8 @@ got, how it ended, and what the world shows because of it.
 - Written in a story's `.river` files and registered with a story's build as one package, `cairn.package`, whose
   compiler side is the `cairn-compiler` module, from `compiler(dep)` in cairn's `build.zig`, on the one riverrun a
   story's build stands on; run by `cairn.Quests`.
+- Played without the game by `riverrun play`, as the game runs them: a stage reached is told as it happens, with
+  its journal lines and its effects, and a quest that starts itself is given a stand-in for each role.
 
 The design is [docs/design.md](docs/design.md).
 
