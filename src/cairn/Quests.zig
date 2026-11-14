@@ -261,7 +261,7 @@ fn readFact(q: *const Quests, raw: u16, key: u64) Value {
 fn readIn(s: *const story_.Story, store: facts.Store, raw: u16, key: u64) Value {
     const f: facts.FactId = .fromRaw(raw);
     if (s.fact(f).key == .none) return store.get(f);
-    if (key == Value.no_ref) return .initial(s.fact(f).kind);
+    if (key == Value.no_ref) return s.fact(f).start();
     return store.getKey(f, key);
 }
 
