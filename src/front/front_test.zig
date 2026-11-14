@@ -38,6 +38,8 @@ const seeds = @import("quest-seeds");
 pub const Built = struct {
     arena: std.heap.ArenaAllocator,
     diags: riverrun.syntax.Diagnostics,
+    /// The story's one file, as read.
+    tree: ?*const riverrun.syntax.ast.File = null,
     checked: ?check.Checked = null,
     compiled: ?riverrun.compile.Compiled = null,
 
@@ -48,14 +50,19 @@ pub const Built = struct {
         b.arena.deinit();
     }
 
+    /// Where a diagnostic is, as a line and a column.
+    pub fn at(b: *const Built, d: riverrun.syntax.source.Diagnostic) riverrun.syntax.Place {
+        return b.tree.?.place(d.span);
+    }
+
     fn print(b: *const Built) void {
-        for (b.diags.list.items) |d| std.debug.print("  {t} {d}:{d}: {s}\n", .{ d.severity, d.span.line, d.span.col, d.message });
+        for (b.diags.list.items) |d| std.debug.print("  {t} {d}:{d}: {s}\n", .{ d.severity, b.at(d).line, b.at(d).col, d.message });
     }
 
     /// A diagnostic with this message, at this place.
     fn has(b: *const Built, severity: Severity, line: u32, col: u32, message: []const u8) !void {
         for (b.diags.list.items) |d| {
-            if (d.severity == severity and d.span.line == line and d.span.col == col and std.mem.eql(u8, d.message, message)) return;
+            if (d.severity == severity and b.at(d).line == line and b.at(d).col == col and std.mem.eql(u8, d.message, message)) return;
         }
         std.debug.print("wanted {t} {d}:{d}: {s}\n", .{ severity, line, col, message });
         b.print();
@@ -83,6 +90,7 @@ fn buildWith(comptime with: anytype, text: []const u8) !Built {
     errdefer b.deinit();
     const tree = try b.arena.allocator().create(riverrun.syntax.ast.File);
     tree.* = try riverrun.syntax.parse(b.arena.allocator(), gpa, &b.diags, 0, "a.river", text);
+    b.tree = tree;
     b.checked = try check.run(gpa, &b.diags, tree[0..1], with.options);
     if (b.diags.errors() == 0) b.compiled = try riverrun.compile.run(gpa, &b.diags, &b.checked.?, .{ .passes = with.passes });
     return b;
@@ -161,7 +169,7 @@ test "any quest's `after` is refused when it comes round, and only then" {
             var named: ?usize = null;
             for (b.diags.list.items) |d| if (std.mem.find(u8, d.message, "comes round to it again") != null) {
                 try std.testing.expect(named == null);
-                named = d.span.line - 4; // the stages start on the fourth line
+                named = b.at(d).line - 4; // the stages start on the fourth line
             };
             if (named) |at| {
                 // the stage it names is on a cycle: it comes after itself

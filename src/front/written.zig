@@ -204,7 +204,7 @@ fn callsInStmt(a: std.mem.Allocator, st: *const ast.Stmt, out: *std.ArrayList(Wr
 }
 
 fn callsInText(a: std.mem.Allocator, t: ast.Text, out: *std.ArrayList(Written)) error{OutOfMemory}!void {
-    for (t) |piece| switch (piece) {
+    for (t) |*piece| switch (piece.kind) {
         .literal => {},
         .value => |*e| try callsIn(a, e, out),
         .choose => |*ch| {

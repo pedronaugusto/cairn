@@ -185,7 +185,7 @@ test "a quest whose ending needs what the story can take away for good gets stuc
     defer arena.deinit();
     // atom 0 is a fact the story sets and never unsets; atom 1 one it can set and unset; atom 2 the stage `done`
     const atoms = [_]Atom{ .{ .flag = .fromRaw(0) }, .{ .flag = .fromRaw(1) }, .{ .flag = .fromRaw(2) } };
-    const at: @import("riverrun-compiler").syntax.Span = .{ .file = 0, .line = 1, .col = 1 };
+    const at: @import("riverrun-compiler").syntax.Span = .{ .file = 0, .start = 0, .end = 1 };
     const ways = [_]Ways{ .{ .up = at }, .{ .up = at, .down = at }, .{} };
     // `done when { b and not a }`: once `a` holds, it never can
     const stuck = try explore(std.testing.allocator, arena.allocator(), .{

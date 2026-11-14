@@ -23,20 +23,20 @@ pub fn declare(a: std.mem.Allocator, s: *const ast.Section, files: []const ast.F
     var stages: std.ArrayList(ast.Name) = .empty;
     for (s.subsections) |*p| try stages.append(a, p.name);
     for (try written.inherited(a, files, s)) |i| try stages.append(a, .{ .text = i.part.name.text, .span = s.name.span });
-    for (stages.items) |n| try out.append(a, .{ .scope = scope, .fact = .{ .name = n, .type = .boolean, .game = true }, .within = true });
+    for (stages.items) |n| try out.append(a, .{ .scope = scope, .fact = .{ .span = n.span, .name = n, .type = .boolean, .game = true }, .within = true });
     const at = s.name.span;
-    try out.append(a, .{ .scope = scope, .fact = .{ .name = .{ .text = written.status, .span = at }, .type = .{ .one_of = try names(a, &written.statuses, at) }, .game = true }, .within = true });
+    try out.append(a, .{ .scope = scope, .fact = .{ .span = at, .name = .{ .text = written.status, .span = at }, .type = .{ .one_of = try names(a, &written.statuses, at) }, .game = true }, .within = true });
     if (stages.items.len > 0) {
-        try out.append(a, .{ .scope = scope, .fact = .{ .name = .{ .text = written.current, .span = at }, .type = .{ .one_of = stages.items }, .game = true }, .within = true });
+        try out.append(a, .{ .scope = scope, .fact = .{ .span = at, .name = .{ .text = written.current, .span = at }, .type = .{ .one_of = stages.items }, .game = true }, .within = true });
     }
     for (try written.builtinCalls(a, s)) |w| {
         const record: ast.Type = if (std.mem.eql(u8, w.name, "since")) .int else .boolean;
-        try out.append(a, .{ .scope = scope, .fact = .{ .name = .{ .text = try written.recordName(a, w), .span = at }, .type = record, .game = true }, .within = true });
+        try out.append(a, .{ .scope = scope, .fact = .{ .span = at, .name = .{ .text = try written.recordName(a, w), .span = at }, .type = record, .game = true }, .within = true });
     }
     // how many instances a repeat quest started is kept once, not per instance
     if (written.repeats(s)) {
         const name = try a.print("{s}.{s}", .{ s.name.text, written.count });
-        try out.append(a, .{ .scope = scope, .fact = .{ .name = .{ .text = name, .span = at }, .type = .int, .game = true } });
+        try out.append(a, .{ .scope = scope, .fact = .{ .span = at, .name = .{ .text = name, .span = at }, .type = .int, .game = true } });
     }
     return out.items;
 }
