@@ -363,6 +363,52 @@ test "a quest that can get stuck is refused, with the way there" {
     try std.testing.expectEqual(@as(usize, 0), fixed.diags.list.items.len);
 }
 
+test "a sum in a condition is an atom free to be either: nothing is decided from it, and the rest still is" {
+    // two endings no value of `coins` lets hold at once, and an outcome only coins reach: neither is refused
+    var b = try build(
+        \\facts:
+        \\  coins: int
+        \\  spent: int
+        \\  tip: int   (game)
+        \\== q (quest)
+        \\= rich    when { coins + tip >= 10 }
+        \\  [outcome]
+        \\= poor    when { coins + tip < 10 and spent - coins > 3 }
+        \\  [fails]
+        \\== a
+        \\* Earn.
+        \\  [coins += tip + 2]
+        \\  -> end
+        \\* Spend.
+        \\  [spent += coins - 1]
+        \\  -> end
+    );
+    defer b.deinit();
+    try std.testing.expectEqual(@as(usize, 0), b.diags.errors());
+    // what does not depend on the sum is still decided: once `dead` holds, the only outcome cannot be
+    var stuck = try build(
+        \\facts:
+        \\  coins: int
+        \\  dead: bool
+        \\  asked: bool
+        \\== q (quest)
+        \\= met     when { asked }
+        \\  [stage]
+        \\= paid    when { met and not dead and coins - 5 >= 0 }
+        \\  [outcome]
+        \\== a
+        \\* Ask.
+        \\  [asked = true]
+        \\  [coins += 5 + 1]
+        \\  -> end
+        \\* Kill him.
+        \\  [dead = true]
+        \\  -> end
+    );
+    defer stuck.deinit();
+    try stuck.only(.err, 5, 4, "`q` can get stuck once `dead` holds: no outcome or failure can be reached from there");
+}
+
 test "a stage nothing can reach is said, and a quest that never ends" {
     var b = try build(
         \\facts:
@@ -518,6 +564,32 @@ test "a live stage follows its condition, and the current stage falls back when 
     try p.set("lamp", .{ .boolean = true });
     _ = try p.quests.step();
     try std.testing.expect(p.quests.reached(i, p.stage("cellar", "carrying")));
+}
+
+test "a builtin read in an int's amount is kept as one read in a condition" {
+    var p: Played = undefined;
+    try p.init(
+        \\facts:
+        \\  day: int   (clock)
+        \\  asked: bool   (game)
+        \\  n: int
+        \\== q (quest)
+        \\= met     when { asked }
+        \\  [stage]
+        \\= later   when { met and day >= 3 }
+        \\  [stage]
+        \\  [n += since(met, day) + 1]
+        \\= done    when { n > 3 }
+        \\  [outcome]
+    , .{});
+    defer p.deinit();
+    try p.set("asked", .{ .boolean = true });
+    _ = try p.quests.step();
+    try p.set("day", .{ .int = 3 });
+    const s = try p.quests.step();
+    try std.testing.expectEqual(@as(usize, 1), s.events.len);
+    const effects = s.events[0].what.reached.effects;
+    try std.testing.expectEqual(@as(i64, 4), effects[0].change.by);
 }
 
 test "two endings reached in one step, where the checker could not tell, are a named error" {

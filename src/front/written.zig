@@ -201,7 +201,8 @@ fn callsInStmt(a: std.mem.Allocator, st: *const ast.Stmt, out: *std.ArrayList(Wr
         .effect => |e| switch (e) {
             .set => |x| try callsIn(a, &x.value, out),
             .call => |c| for (c.args) |*arg| try callsIn(a, arg, out),
-            .add, .remove => {},
+            // an int's amount may be a sum that reads a builtin, `[n += since(met, day) + 1]`
+            .add, .remove => |x| try callsIn(a, &x.amount, out),
         },
         else => {},
     }
