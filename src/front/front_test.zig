@@ -206,9 +206,8 @@ test "any quest's `after` is refused when it comes round, and only then" {
 }
 
 test "any text through riverrun's reader, checker and compiler with cairn registered is a story told and its quests stepped, or diagnostics; never a crash" {
-    var seen: u32 = 0;
-    try shakedown.check(gpa, &seen, struct {
-        fn one(compiled: *u32, case: *shakedown.Case) anyerror!void {
+    try shakedown.check(gpa, {}, struct {
+        fn one(_: void, case: *shakedown.Case) anyerror!void {
             const gen = shakedown.gen;
             var arena: std.heap.ArenaAllocator = .init(gpa);
             defer arena.deinit();
@@ -232,7 +231,10 @@ test "any text through riverrun's reader, checker and compiler with cairn regist
             const outcome = try tools.trial.trial(gpa, &.{.{ .path = "quests.river", .text = text.items }}, story_vocabulary, .{ .package = quests }, .{ .ctx = case.source, .pick = Picker.pick });
             switch (outcome) {
                 .refused => {},
-                .told => compiled.* += 1,
+                .told => |t| {
+                    case.reached("compiled");
+                    if (t.lines > 0) case.reached("told a line");
+                },
                 .fault => |f| {
                     var buffer: [256]u8 = undefined;
                     var w: std.Io.Writer = .fixed(&buffer);
@@ -278,9 +280,12 @@ test "any text through riverrun's reader, checker and compiler with cairn regist
                 else => text.shrinkRetainingCapacity(at),
             }
         }
-    }.one, .{ .cases = 600, .seed = 0xca4 });
-    // the property reaches the compiler, the runtime and cairn's quests, not only the reader's refusals
-    try std.testing.expect(seen > 60);
+    }.one, .{
+        .cases = 600,
+        .seed = 0xca4,
+        // the property reaches the compiler and the runtime, not only the reader's refusals
+        .reach = &.{ "compiled", "told a line" },
+    });
 }
 
 /// cairn's runtime over a story that compiled and was told: its block loaded and its quests stepped, as a game
