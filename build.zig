@@ -100,14 +100,14 @@ const the_stranger_played =
     \\! started the_stranger
     \\! reached the_stranger.noticed
     \\  A man nobody knows stood at the foot of the coffin.
-    \\! active spawn_stranger
+    \\! active spawn_stranger for the_stranger
     \\* 1 Ask Margaret.
     \\* 2 Ask nobody.
     \\> :set found += letter
     \\! reached the_stranger.the_letter
     \\  A letter signed "L.", from a city she never lived in.
-    \\! inactive spawn_stranger
-    \\! active pin_letter
+    \\! inactive spawn_stranger for the_stranger
+    \\! active pin_letter for the_stranger
     \\* 1 Ask Margaret.
     \\* 2 Ask nobody.
     \\> :facts the_stranger.noticed the_stranger.the_letter
@@ -116,7 +116,7 @@ const the_stranger_played =
     \\> :set said += gave
     \\! reached the_stranger.the_hands
     \\  He said the hands were the same.
-    \\! inactive pin_letter
+    \\! inactive pin_letter for the_stranger
     \\! reached the_stranger.named
     \\  He was Tom, her son, from a life she didn't live.
     \\  [carried += his_name]
@@ -158,7 +158,7 @@ const board_played =
     \\! reached bounty(1).posted
     \\  A price on .
     \\  ? name(wolf) = "" (not set)
-    \\! active pin_target
+    \\! active pin_target for bounty(1)
     \\* 1 Look at the board. ^c1
     \\* 2 Leave. ^c2
     \\> :start bounty target = ulf
@@ -166,7 +166,7 @@ const board_played =
     \\! reached bounty(2).posted
     \\  A price on .
     \\  ? name(ulf) = "" (not set)
-    \\! active pin_target
+    \\! active pin_target for bounty(2)
     \\* 1 Look at the board. ^c1
     \\* 2 Leave. ^c2
     \\> :set dead(wolf) = true
@@ -174,7 +174,7 @@ const board_played =
     \\  Paid.
     \\  [gold += 50]
     \\! ended bounty(1).claimed
-    \\! inactive pin_target
+    \\! inactive pin_target for bounty(1)
     \\! reached delivery.delivered
     \\  Delivered, and paid for.
     \\! ended delivery.delivered
@@ -184,7 +184,7 @@ const board_played =
     \\! reached bounty(2).expired
     \\  The board took the notice down.
     \\! failed bounty(2).expired
-    \\! inactive pin_target
+    \\! inactive pin_target for bounty(2)
     \\* 1 Look at the board. ^c1
     \\* 2 Leave. ^c2
     \\> 2

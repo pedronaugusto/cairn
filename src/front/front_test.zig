@@ -324,7 +324,7 @@ test "activation keys are the host's, and `follows` names shared rules" {
         \\-> end
     );
     defer b.deinit();
-    try b.has(.err, 6, 28, "the host has no activation key `spwan`");
+    try b.has(.err, 6, 28, "the game has no activation key `spwan`");
     try b.has(.err, 4, 12, "`a` is not `(quest rules)`");
     try b.has(.err, 4, 15, "`nobody` is not a section");
 }

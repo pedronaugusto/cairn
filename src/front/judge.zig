@@ -36,7 +36,7 @@ pub fn keys(c: *Checker, t: Tagged) Error!void {
     for (t.tag.values, 0..) |v, i| {
         if (!isWord(v)) {
             try c.err(t.tag.at(i), "`{s}` names an activation key, letters, digits and `_`: `{s}` is not one", .{ t.tag.key.text, v });
-        } else if (!c.knowsThing(kind, v)) try c.err(t.tag.at(i), "the host has no activation key `{s}`", .{v});
+        } else if (!c.knowsThing(kind, v)) try c.err(t.tag.at(i), "the game has no activation key `{s}`", .{v});
     }
 }
 

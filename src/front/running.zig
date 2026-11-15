@@ -100,14 +100,15 @@ fn step(state: *anyopaque, told: *river.Running.Told) error{ OutOfMemory, Stoppe
             const words = try told.arena.alloc([]const u8, lines.len);
             for (words, lines) |*w, text| w.* = try told.arena.dupe(u8, q.say(st.words, e.instance, r.stage, text, .{}) catch |f| {
                 if (f == error.OutOfMemory) return error.OutOfMemory;
-                return told.stopAt(q.metAt(), "a journal line of `{s}` met {s}", .{ stageName(st, e.instance, r.stage), describe(f) });
+                return told.stopAt(q.metAt(), "a journal line of `{s}` met {s}", .{ try stageOf(told.arena, st, e.instance, r.stage), describe(f) });
             });
             try told.say(.{ .what = "reached", .name = try stageOf(told.arena, st, e.instance, r.stage), .words = words, .effects = r.effects, .written = r.written });
         },
         .left => |stage| try told.say(.{ .what = "left", .name = try stageOf(told.arena, st, e.instance, stage) }),
         .ended => |end| try told.say(.{ .what = if (end.failed) "failed" else "ended", .name = try stageOf(told.arena, st, e.instance, end.stage) }),
-        .activated => |key| try told.say(.{ .what = "active", .name = key.name }),
-        .deactivated => |key| try told.say(.{ .what = "inactive", .name = key.name }),
+        // a key is active for an instance, so a repeat quest's many say whose it is
+        .activated => |key| try told.say(.{ .what = "active", .name = try told.arena.print("{s} for {s}", .{ key.name, try instanceName(told.arena, st, e.instance) }) }),
+        .deactivated => |key| try told.say(.{ .what = "inactive", .name = try told.arena.print("{s} for {s}", .{ key.name, try instanceName(told.arena, st, e.instance) }) }),
     };
 }
 
@@ -203,9 +204,9 @@ fn stageName(st: *const State, i: cairn.Instance, stage: cairn.StageId) []const 
     return st.story.section(.fromRaw(st.quests.quests()[i.quest.raw()].stages[stage.raw()].section)).name;
 }
 
-// A stage of an instance by name: `the_stranger.noticed`, `bounty(2).tracked`.
+// A stage of an instance by name: `the_stranger.noticed`, `bounty(2).tracked`, and a stage it inherits from shared
+// rules by the quest that inherits it, `the_stranger.abandoned`, never the rules' own name.
 fn stageOf(a: std.mem.Allocator, st: *const State, i: cairn.Instance, stage: cairn.StageId) error{OutOfMemory}![]const u8 {
-    if (i.key == facts.Value.no_ref) return stageName(st, i, stage);
     return a.print("{s}.{s}", .{ try instanceName(a, st, i), shortName(stageName(st, i, stage)) });
 }
 

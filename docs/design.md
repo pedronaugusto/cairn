@@ -181,7 +181,8 @@ Built, with the named errors `TwoEndings`, `NoFixedPoint`, `TooManyInstances`, `
 tools (`running`, in `src/front/running.zig`), which starts `Quests` over the played story's facts, steps it
 whenever they change, and says what each step did: `! started the_stranger`, `! reached the_stranger.noticed`
 with the stage's journal lines and its effects (which the play applies, as a game would), `! left`, `! ended` or
-`! failed` at the ending stage, `! active` and `! inactive` for its activation keys. Its builtins answer the
+`! failed` at the ending stage, `! active` and `! inactive` for its activation keys, each with its instance
+(`! active pin_target for bounty(2)`); a stage a quest inherits is told as the quest's. Its builtins answer the
 story's own `since` and `before`, and a query's answer the player sets is bumped as the game bumps its stamp. A
 quest that starts itself and has roles is given what the game would give it, a stand-in thing for each role, named
 for the role (`stranger`), which the player names in `:set name(stranger) = "Tom"`. What cairn asks while it works
@@ -204,7 +205,7 @@ which `:help` lists with each quest of the story and its roles:
 ! reached bounty(1).posted
   A price on .
   ? name(wolf) = "" (not set)
-! active pin_target
+! active pin_target for bounty(1)
 ```
 
 Before the story starts, `riverrun play --call 'start delivery giver=hilde'`. The rest of cairn's API a game calls
