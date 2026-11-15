@@ -184,8 +184,33 @@ with the stage's journal lines and its effects (which the play applies, as a gam
 `! failed` at the ending stage, `! active` and `! inactive` for its activation keys. Its builtins answer the
 story's own `since` and `before`, and a query's answer the player sets is bumped as the game bumps its stamp. A
 quest that starts itself and has roles is given what the game would give it, a stand-in thing for each role, named
-for the role (`stranger`), which the player names in `:set name(stranger) = "Tom"`. A quest the host starts
-(`[start host]`, a repeat quest) is not started by the play: the game decides when.
+for the role (`stranger`), which the player names in `:set name(stranger) = "Tom"`. What cairn asks while it works
+out a news (a journal line's `{name(target)}`) is told under that news. An error in a stage's condition or effects
+is placed where it is written.
+
+The game's calls into cairn that change what the story tells are offered to the player as the play's commands,
+which `:help` lists with each quest of the story and its roles:
+
+- `:start QUEST ROLE=THING…` is the game's `start`: any quest, with its roles, a thing of the role's kind each (the
+  story's thing of that name, else one of the game's the play stands in for); a repeat quest's next instance each
+  time (`! started bounty(2)`). Refused where the quest is not there, a role is missing, given none or a thing of
+  another kind, or a quest that runs once has started (`delivery` has started already).
+- `:bind QUEST ROLE=THING…` is the game's `bind`, for a quest that starts itself and has roles: its roles given
+  before it starts (in place of the stand-ins), refused once it has started.
+
+```
+> :start bounty target=wolf
+! started bounty(1)
+! reached bounty(1).posted
+  A price on .
+  ? name(wolf) = "" (not set)
+! active pin_target
+```
+
+Before the story starts, `riverrun play --call 'start delivery giver=hilde'`. The rest of cairn's API a game calls
+changes nothing a story tells, or is the play's own already: `step` (the play steps it), `bump` (`:set` of a
+query's answer bumps it), `restored` (going back is the play's `:back`), and what reads (`status`, `journal`,
+`activeSet`…), which the news already tells.
 
 Built.
 

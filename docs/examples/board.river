@@ -1,0 +1,40 @@
+// A quest the game starts with its giver, and a board of bounties the game posts again and again: each bounty its
+// own instance, its target a role the game gives.
+facts (world):
+  dead(person): bool   (game)
+  day:  int            (clock)
+  gold: int
+extern:
+  name(who: ref of person) -> text
+
+== delivery (quest)
+  [start host] [scope world] [title "A letter for the mill"]
+facts (world):
+  giver: ref of person   (role)
+= taken        when { true }
+  [stage]
+  A letter for the mill, from {name(giver)}. ^d1
+= delivered    when { gold > 0 }
+  [outcome] [after taken]
+  Delivered, and paid for. ^d2
+
+== bounty (quest)
+  [repeat] [scope world] [title "A bounty"]
+facts (world):
+  target: ref of person   (role)
+= posted       when { true }
+  [stage] [active pin_target]
+  A price on {name(target)}. ^b1
+= claimed      when { dead(target) }
+  [outcome] [after posted]
+  [gold += 50]
+  Paid. ^b3
+= expired      when { since(posted, day) > 3 and not dead(target) }
+  [fails]
+  The board took the notice down. ^b4
+
+== board
++ Look at the board. ^c1
+  -> board
+* Leave. ^c2
+  -> end

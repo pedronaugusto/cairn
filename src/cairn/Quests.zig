@@ -69,8 +69,9 @@ pub const Event = struct {
 
     pub const What = union(enum) {
         started,
-        /// A stage reached, and what reaching it does: its effects, emitted for the host to apply.
-        reached: struct { stage: StageId, effects: []const facts.Effect },
+        /// A stage reached, and what reaching it does: its effects, emitted for the host to apply, and where each is
+        /// written, its place among the story's effects (`story.At.effect`), for an error applying it to be placed.
+        reached: struct { stage: StageId, effects: []const facts.Effect, written: []const u32 = &.{} },
         /// A live stage whose condition no longer holds.
         left: StageId,
         /// The instance ended, at an outcome or a failure.
@@ -123,6 +124,9 @@ say_arena: std.heap.ArenaAllocator,
 pending: std.ArrayList(Change) = .empty,
 /// How many conditions the steps have evaluated, in all: what a host measures a budget by.
 evaluations: u64 = 0,
+/// What of the story the named error the last step or `say` returned was met at, where cairn knows more than its
+/// watch: an effect of a stage, a journal line's value.
+met: ?story_.At = null,
 
 const Change = struct { run: u32, stage: u8, reach: bool };
 
@@ -503,6 +507,7 @@ fn answer(user: ?*anyopaque, _: *const story_.Story, index: u32, cx: run.Context
 /// Evaluates what may have changed since the last step, reaching stages to a fixed point, and says what happened.
 pub fn step(q: *Quests) Error!Step {
     _ = q.step_arena.reset(.retain_capacity);
+    q.met = null;
     q.events.clearRetainingCapacity();
     try q.events.appendSlice(q.gpa, q.queued.items);
     q.queued.clearRetainingCapacity();
@@ -518,6 +523,12 @@ pub fn step(q: *Quests) Error!Step {
         if (left != null and left.? == 0) break;
     }
     return .{ .events = q.events.items };
+}
+
+/// What of the story the named error the last `step` or `say` returned was met at: a stage's condition, one of
+/// its effects, or a value in a journal line; null where it is about nothing written (`TwoEndings`, `NoFixedPoint`).
+pub fn metAt(q: *const Quests) ?story_.At {
+    return q.met orelse q.watch.met;
 }
 
 /// The host's word that what a query reads changed: `family` is the stamp it declared, `keyed` the values of its
@@ -600,7 +611,8 @@ fn reach(q: *Quests, r: u32, k: u8) Error!void {
         else => {},
     };
     if (!st.live) try q.unwatchStage(r, k);
-    try q.events.append(q.gpa, .{ .instance = i, .what = .{ .reached = .{ .stage = .fromRaw(k), .effects = try q.effectsOf(r, st) } } });
+    const done = try q.effectsOf(r, st);
+    try q.events.append(q.gpa, .{ .instance = i, .what = .{ .reached = .{ .stage = .fromRaw(k), .effects = done.effects, .written = done.written } } });
 }
 
 fn leave(q: *Quests, r: u32, k: u8) Error!void {
@@ -642,10 +654,12 @@ fn release(q: *Quests, r: u32) Error!void {
     try q.free.append(q.gpa, r);
 }
 
-// What reaching a stage does: the effects of its body and of its lines, in order, worked out for the instance.
-fn effectsOf(q: *Quests, r: u32, st: block.Stage) Error![]const facts.Effect {
+// What reaching a stage does: the effects of its body and of its lines, in order, worked out for the instance, and
+// where each is written.
+fn effectsOf(q: *Quests, r: u32, st: block.Stage) Error!struct { effects: []const facts.Effect, written: []const u32 } {
     const a = q.step_arena.allocator();
     var out: std.ArrayList(facts.Effect) = .empty;
+    var written: std.ArrayList(u32) = .empty;
     const cx = try q.context(a, r, st);
     var at = q.story.section(.fromRaw(st.section)).entry;
     var walked: usize = 0;
@@ -657,10 +671,17 @@ fn effectsOf(q: *Quests, r: u32, st: block.Stage) Error![]const facts.Effect {
             .effects => |e| .{ e.effects, e.next },
             else => break,
         };
-        for (0..list.len) |k| try out.append(a, try run.eval.effect(cx, q.story.effect(list.start + @as(u32, @intCast(k))))); // safe: below a u32 length
+        for (0..list.len) |k| {
+            const index = list.start + @as(u32, @intCast(k)); // safe: below a u32 length
+            try out.append(a, run.eval.effect(cx, q.story.effect(index)) catch |e| {
+                q.met = .{ .effect = index };
+                return e;
+            });
+            try written.append(a, index);
+        }
         at = next;
     }
-    return out.items;
+    return .{ .effects = out.items, .written = written.items };
 }
 
 fn context(q: *Quests, a: std.mem.Allocator, r: u32, st: block.Stage) Error!run.eval.Context {
@@ -673,6 +694,7 @@ fn context(q: *Quests, a: std.mem.Allocator, r: u32, st: block.Stage) Error!run.
         .arena = a,
         .builtins = q.builtins(),
         .roles = try q.rolesFor(a, q.instanceOf(r), st),
+        .met = &q.met,
     };
 }
 
@@ -755,6 +777,7 @@ pub fn lines(q: *const Quests, quest: QuestId, stage: StageId, out: []story_.Tex
 /// A journal line's words for the instance, its roles and its own facts filled in, valid until the next `say`.
 pub fn say(q: *Quests, words: *const story_.Strings, i: Instance, stage: StageId, text: story_.TextId, language: run.Language) (Error || run.text.Error)![]const u8 {
     _ = q.say_arena.reset(.retain_capacity);
+    q.met = null;
     const a = q.say_arena.allocator();
     const st = q.plan(i.quest).stages[stage.raw()];
     const cx: run.eval.Context = .{
@@ -766,6 +789,7 @@ pub fn say(q: *Quests, words: *const story_.Strings, i: Instance, stage: StageId
         .builtins = q.builtins(),
         .language = language,
         .roles = try q.rolesFor(a, i, st),
+        .met = &q.met,
     };
     return run.text.render(cx, words, text);
 }

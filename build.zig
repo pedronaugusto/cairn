@@ -84,7 +84,7 @@ pub fn dev(b: *std.Build, tools: type) void {
 /// The stories cairn's documentation shows: each checked by `riverrun check` with the game's vocabulary of
 /// cairn's development, and every story the documents show rows of one of them.
 const documented = struct {
-    const stories = [_][]const u8{ "docs/examples/the_stranger.river", "docs/examples/written.river", "docs/examples/vocabulary.river" };
+    const stories = [_][]const u8{ "docs/examples/the_stranger.river", "docs/examples/written.river", "docs/examples/vocabulary.river", "docs/examples/board.river" };
     const documents = [_][]const u8{ "docs/design.md", "src/front/written.zig", "src/front/vocabulary.zig" };
 };
 
@@ -114,13 +114,13 @@ const the_stranger_played =
     \\  the_stranger.noticed = true
     \\  the_stranger.the_letter = true
     \\> :set said += gave
-    \\? name(stranger) = "Tom"
     \\! reached the_stranger.the_hands
     \\  He said the hands were the same.
     \\! inactive pin_letter
     \\! reached the_stranger.named
     \\  He was Tom, her son, from a life she didn't live.
     \\  [carried += his_name]
+    \\  ? name(stranger) = "Tom"
     \\! ended the_stranger.named
     \\* 1 Ask Margaret.
     \\* 2 Ask nobody.
@@ -141,6 +141,57 @@ const the_stranger_played =
     \\
 ;
 
+/// What `riverrun play` writes for `tools/testdata/board.play`: the game's calls into cairn as the play's commands.
+const board_played =
+    \\== board
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> :start delivery giver=hilde
+    \\! started delivery
+    \\! reached delivery.taken
+    \\  A letter for the mill, from .
+    \\  ? name(hilde) = "" (not set)
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> :start bounty target=wolf
+    \\! started bounty(1)
+    \\! reached bounty(1).posted
+    \\  A price on .
+    \\  ? name(wolf) = "" (not set)
+    \\! active pin_target
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> :start bounty target = ulf
+    \\! started bounty(2)
+    \\! reached bounty(2).posted
+    \\  A price on .
+    \\  ? name(ulf) = "" (not set)
+    \\! active pin_target
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> :set dead(wolf) = true
+    \\! reached bounty(1).claimed
+    \\  Paid.
+    \\  [gold += 50]
+    \\! ended bounty(1).claimed
+    \\! inactive pin_target
+    \\! reached delivery.delivered
+    \\  Delivered, and paid for.
+    \\! ended delivery.delivered
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> :wait 4
+    \\! reached bounty(2).expired
+    \\  The board took the notice down.
+    \\! failed bounty(2).expired
+    \\! inactive pin_target
+    \\* 1 Look at the board. ^c1
+    \\* 2 Leave. ^c2
+    \\> 2
+    \\-> end
+    \\
+;
+
 fn docs(b: *std.Build, test_step: *std.Build.Step) ?void {
     const package = b.dependency("cairn", riverrun.building(b));
     const river = b.dependency("riverrun", riverrun.building(b));
@@ -158,6 +209,15 @@ fn docs(b: *std.Build, test_step: *std.Build.Step) ?void {
     played.expectExitCode(0);
     played.expectStdOutEqual(the_stranger_played);
     test_step.dependOn(&played.step);
+    // a quest the game starts, and a repeat quest it starts twice, through cairn's commands
+    const board = b.addRunArtifact(program);
+    board.addArgs(&.{ "play", "--script" });
+    board.addFileArg2(package.path("tools/testdata/board.play"), .{});
+    board.addFileArg2(package.path("docs/examples/board.river"), .{});
+    board.setStdIn(.{ .bytes = "" });
+    board.expectExitCode(0);
+    board.expectStdOutEqual(board_played);
+    test_step.dependOn(&board.step);
     const excerpts = riverrun.addExcerptsTest(b, river, .{ .package = package.builder, .stories = &documented.stories, .documents = &documented.documents }) orelse return null;
     test_step.dependOn(&b.addRunArtifact(excerpts).step);
 }

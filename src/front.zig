@@ -26,4 +26,5 @@ test {
     _ = @import("front/pass.zig");
     _ = @import("front/front_test.zig");
     _ = @import("front/running.zig");
+    _ = @import("front/play_test.zig");
 }

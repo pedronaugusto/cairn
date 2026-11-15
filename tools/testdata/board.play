@@ -1,0 +1,7 @@
+// The game starts the delivery with its giver and posts two bounties; one target dies, and days pass.
+:start delivery giver=hilde
+:start bounty target=wolf
+:start bounty target = ulf
+:set dead(wolf) = true
+:wait 4
+2
