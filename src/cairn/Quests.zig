@@ -280,12 +280,12 @@ fn writeFact(q: *Quests, raw: u16, key: u64, v: Value) Error!void {
 /// Where an instance has got: idle until it starts, then active until it ends.
 pub fn status(q: *const Quests, i: Instance) Status {
     const v = q.readFact(q.plan(i.quest).status, i.key).one_of;
-    return switch (v) {
-        0 => .active,
-        1 => .done,
-        2 => .failed,
-        else => .idle,
-    };
+    return std.enums.fromInt(Status, v) orelse .idle;
+}
+
+// A status as `@status` holds it: its place among `written.statuses`, which lists them in `Status`'s order.
+fn statusValue(s: Status) Value {
+    return .{ .one_of = @backingInt(s) };
 }
 
 /// Whether the instance has reached the stage.
@@ -293,12 +293,15 @@ pub fn reached(q: *const Quests, i: Instance, stage: StageId) bool {
     return q.readFact(q.plan(i.quest).stages[stage.raw()].fact, i.key).boolean;
 }
 
-/// The stage the instance reached last, while it is reached.
+/// The stage the instance reached last, while it is reached. `@current` always holds a stage, the first before any
+/// is reached: it names the current one only while that stage is reached.
 pub fn current(q: *const Quests, i: Instance) ?StageId {
     const p = q.plan(i.quest);
     if (p.current == block.none16) return null;
     const v = q.readFact(p.current, i.key).one_of;
-    return if (v < p.stages.len) .fromRaw(@intCast(v)) else null; // safe: below max_stages
+    if (v >= p.stages.len) return null;
+    const stage: StageId = .fromRaw(@intCast(v)); // safe: below max_stages
+    return if (q.reached(i, stage)) stage else null;
 }
 
 /// The value the instance was given for its quest's role `role`.
@@ -334,7 +337,7 @@ pub fn start(q: *Quests, quest: QuestId, roles: []const Value) Error!Instance {
     } else if (q.status(.{ .quest = quest }) != .idle) return error.AlreadyStarted;
     const i: Instance = .{ .quest = quest, .key = key };
     for (p.roles, roles) |f, v| try q.writeFact(f, key, v);
-    try q.writeFact(p.status, key, .{ .one_of = 0 });
+    try q.writeFact(p.status, key, statusValue(.active));
     const r = if (p.repeat) try q.newRun(quest.raw(), key) else quest.raw();
     q.runs.items[r].status = .active;
     try q.watchAll(r);
@@ -421,7 +424,8 @@ fn watchAll(q: *Quests, r: u32) Error!void {
 // The stages a quest that starts itself starts at: those with no `after`.
 fn watchStarts(q: *Quests, r: u32) Error!void {
     const p = q.loaded.plan.quests[q.runs.items[r].quest];
-    for (p.stages, 0..) |st, k| if (st.after.len == 0) try q.watchStage(r, @intCast(k)); // safe: at most max_stages
+    // a quest starts by a first stage of its own: one it inherits from shared rules is reached once it has started
+    for (p.stages, 0..) |st, k| if (st.after.len == 0 and !st.inherited) try q.watchStage(r, @intCast(k)); // safe: at most max_stages
 }
 
 fn unwatchStage(q: *Quests, r: u32, k: u8) Error!void {
@@ -578,7 +582,7 @@ fn apply(q: *Quests, r: u32, changes: []const Change) Error!void {
     var was: [block.max_keys * 2]u32 = undefined;
     const before = q.keysOf(r, &was);
     if (q.runs.items[r].status == .idle) {
-        try q.writeFact(p.status, i.key, .{ .one_of = 0 });
+        try q.writeFact(p.status, i.key, statusValue(.active));
         q.runs.items[r].status = .active;
         try q.events.append(q.gpa, .{ .instance = i, .what = .started });
         try q.unwatch(r);
@@ -619,10 +623,8 @@ fn leave(q: *Quests, r: u32, k: u8) Error!void {
     const i = q.instanceOf(r);
     const p = q.plan(i.quest);
     try q.writeFact(p.stages[k].fact, i.key, .{ .boolean = false });
-    if (p.current != block.none16 and q.current(i) != null and q.current(i).?.eql(.fromRaw(k))) {
-        try q.writeFact(p.current, i.key, .{ .one_of = Value.none });
-        try q.repairCurrent(i);
-    }
+    // its stage no longer reached, `@current` names no current stage until another reached one is written
+    if (p.current != block.none16) try q.repairCurrent(i);
     try q.events.append(q.gpa, .{ .instance = i, .what = .{ .left = .fromRaw(k) } });
 }
 
@@ -639,7 +641,7 @@ fn end(q: *Quests, r: u32, k: u8) Error!void {
     const i = q.instanceOf(r);
     const p = q.plan(i.quest);
     const failed = p.stages[k].kind == .fails;
-    try q.writeFact(p.status, i.key, .{ .one_of = if (failed) 2 else 1 });
+    try q.writeFact(p.status, i.key, statusValue(if (failed) .failed else .done));
     q.runs.items[r].status = if (failed) .failed else .done;
     try q.unwatch(r);
     try q.events.append(q.gpa, .{ .instance = i, .what = .{ .ended = .{ .stage = .fromRaw(k), .failed = failed } } });
@@ -838,7 +840,7 @@ test "the quests are what the facts say, however they came to say it" {
     defer memory.deinit();
     const owners: [facts.max_scopes]u64 = @splat(0);
     // a save in which the quest was started and noticed: nothing is said of it, and it goes on from there
-    try memory.set(s.factNamed("q.@status").?, .{ .one_of = 0 });
+    try memory.set(s.factNamed("q.@status").?, statusValue(.active));
     try memory.set(s.factNamed("q.noticed").?, .{ .boolean = true });
     var q: Quests = try .init(gpa, &s, memory.store(), &run.Host.none, &owners, .{});
     defer q.deinit();

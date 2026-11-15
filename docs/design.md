@@ -129,7 +129,10 @@ protocol.
 - **The active set and the journal are derived,** never saved: recomputed from the facts on load (`restored`), so
   they cannot disagree with them.
 - What cairn keeps for itself is named with `@` within the quest (`the_stranger.@status`, `@current`,
-  `@since.accepted.day`, `bounty.@count`), so no writer names it and a snapshot saves it by name.
+  `@since.accepted.day`, `bounty.@count`), so no writer names it and a snapshot saves it by name. Like every
+  `one of` in riverrun, these always hold a value: `@status` lists `idle` first, for a quest not started, and
+  `@current` holds a stage, its first before any is reached, naming the current stage only while that stage is
+  reached.
 
 Built.
 

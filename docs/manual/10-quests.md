@@ -613,12 +613,12 @@ $ riverrun play --set 'name(miller) = "Mrs Miller"' --call 'start parcel to=mill
 > :start parcel to=miller
 ! roles cutpurse
   thief = thief, standing in for the game's
-== fair
 ! started parcel(1)
 ! reached parcel(1).given
   A parcel from Otto's stall, for Mrs Miller.
   ? name(miller) = "Mrs Miller"
 ! active parcel_marked for parcel(1)
+== fair
 Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
 == stall
 OTTO: Needles, thread, buttons!
@@ -714,8 +714,8 @@ OTTO: Needles, thread, buttons!
 -> end
 ```
 
-`--set` and `--call` are the first rows, as the game gave them; the first parcel's news is told as the story
-starts. `pip` and `ada` are the game's people, stood in for and named by `:set`. Mrs Miller's parcel is handed over
+`--set` and `--call` are the first rows, as the game gave them; the first parcel's news is told before the fair's
+heading, since the game started it before the story starts. `pip` and `ada` are the game's people, stood in for and named by `:set`. Mrs Miller's parcel is handed over
 at the stall, and at the mill she thanks the player for it: `{ handed(miller) }` reads what the game set. Pip goes
 home before the parcel reaches them, and the stage every quest with a `to` inherits fails that parcel; nobody comes
 for Ada's, and three hours on it is late. Each instance keeps its own stages and its own mark on the map, and ends

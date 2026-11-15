@@ -2,7 +2,7 @@
 // investigation as cairn's design writes it, found out over lives: what the
 // player carries is kept in `player`, what one life saw in `life`.
 cast:
-  margaret  "Margaret"   — her eldest
+  margaret  "Margaret"   her eldest
 facts (player):
   carried: set of his_name, her_hands
 facts (life):

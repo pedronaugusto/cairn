@@ -2,12 +2,12 @@
 > :start parcel to=miller
 ! roles cutpurse
   thief = thief, standing in for the game's
-== fair
 ! started parcel(1)
 ! reached parcel(1).given
   A parcel from Otto's stall, for Mrs Miller.
   ? name(miller) = "Mrs Miller"
 ! active parcel_marked for parcel(1)
+== fair
 Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
 == stall
 OTTO: Needles, thread, buttons!

@@ -67,7 +67,7 @@ fn quest(s: *const story.Story, q: block.Quest) Error!void {
     if (q.section >= s.len(.sections) or s.section(.fromRaw(q.section)).kind != .other) return error.NotThisStory;
     const per: ?bool = q.repeat;
     const status = s.fact(try fact(s, q.status, .one_of, per));
-    if (status.enumeration == null or s.items(status.enumeration.?).len < 3) return error.NotThisStory;
+    if (status.enumeration == null or s.items(status.enumeration.?).len < 4) return error.NotThisStory;
     if (q.current != block.none16) {
         const current = s.fact(try fact(s, q.current, .one_of, per));
         if (current.enumeration == null or s.items(current.enumeration.?).len < q.stages.len) return error.NotThisStory;

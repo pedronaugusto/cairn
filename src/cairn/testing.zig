@@ -29,7 +29,7 @@ pub fn build(gpa: std.mem.Allocator, edit: ?*const fn (*block.Plan) void) !Built
     const gold = try b.fact(.{ .name = "gold", .scope = world, .kind = .int });
     const noticed = try b.fact(.{ .name = "q.noticed", .scope = world, .kind = .boolean, .role = .game });
     const named = try b.fact(.{ .name = "q.named", .scope = world, .kind = .boolean, .role = .game });
-    const status = try b.fact(.{ .name = "q.@status", .scope = world, .kind = .one_of, .enumeration = try b.enumeration(&.{ "active", "done", "failed" }), .role = .game });
+    const status = try b.fact(.{ .name = "q.@status", .scope = world, .kind = .one_of, .enumeration = try b.enumeration(&.{ "idle", "active", "done", "failed" }), .role = .game });
     const current = try b.fact(.{ .name = "q.@current", .scope = world, .kind = .one_of, .enumeration = try b.enumeration(&.{ "noticed", "named" }), .role = .game });
     const q = try b.section(.{ .name = "q", .kind = .other, .kind_name = "quest", .visits = null });
     b.enter(q, try b.node(.{ .step = .ret }));

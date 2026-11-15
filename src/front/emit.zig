@@ -44,6 +44,7 @@ const Emitter = struct {
         const stages = try a.alloc(block.Stage, q.stages.len);
         for (stages, q.stages, 0..) |*out, st, k| {
             out.* = try e.stage(st);
+            out.inherited = !st.owner.eql(q.section);
             if (st.owner.eql(q.section)) try e.parts.put(a, out.section, .{ .quest = index, .stage = @intCast(k) }); // safe: at most max_stages
         }
         return .{

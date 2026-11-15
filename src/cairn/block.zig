@@ -95,6 +95,8 @@ pub const Stage = struct {
     live: bool = false,
     /// An objective the quest can end without.
     optional: bool = false,
+    /// Inherited from shared rules: the quest reaches it as its own once started, and it never starts the quest.
+    inherited: bool = false,
     /// The stages it comes after, by their place in the quest.
     after: []const u8 = &.{},
     /// The things its keys are, which stay active while it is the quest's current stage, and from it until the
@@ -183,7 +185,7 @@ const Writer = struct {
         try w.int(u32, s.when.start);
         try w.int(u32, s.when.len);
         try w.int(u8, @backingInt(s.kind));
-        try w.int(u8, @as(u8, @intFromBool(s.live)) | (@as(u8, @intFromBool(s.optional)) << 1));
+        try w.int(u8, @as(u8, @intFromBool(s.live)) | (@as(u8, @intFromBool(s.optional)) << 1) | (@as(u8, @intFromBool(s.inherited)) << 2));
         try w.list(u8, s.after);
         try w.list(u32, s.active);
         try w.list(u32, s.keeps);
@@ -292,9 +294,10 @@ const Reader = struct {
         var s: Stage = .{ .section = try r.int(u32), .fact = try r.int(u16), .when = .{ .start = try r.int(u32), .len = try r.int(u32) }, .kind = .stage };
         s.kind = std.enums.fromInt(Kind, try r.int(u8)) orelse return error.Malformed;
         const flags = try r.int(u8);
-        if (flags > 0b11) return error.Malformed;
+        if (flags > 0b111) return error.Malformed;
         s.live = flags & 1 != 0;
         s.optional = flags & 2 != 0;
+        s.inherited = flags & 4 != 0;
         s.after = try r.list(arena, u8, std.math.maxInt(u8));
         s.active = try r.list(arena, u32, max_keys);
         s.keeps = try r.list(arena, u32, max_keys);

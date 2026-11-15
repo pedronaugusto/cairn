@@ -1,7 +1,7 @@
 // The fair on the far bank at Hollin, and an errand Otto has for the player.
 cast:
-  otto     "Otto"         — a pedlar, at his stall
-  miller   "Mrs Miller"   — from the mill, who buys on the slate
+  otto     "Otto"         a pedlar, at his stall
+  miller   "Mrs Miller"   from the mill, who buys on the slate
 
 facts (player):
   carrying: set of needles, money

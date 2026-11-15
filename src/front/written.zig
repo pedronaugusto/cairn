@@ -256,8 +256,8 @@ pub const status = "@status";
 pub const current = "@current";
 /// For a repeat quest, how many instances it has started: `quest.@count`, kept once, not per instance.
 pub const count = "@count";
-/// The values of a quest's status: none until it starts.
-pub const statuses = [_][]const u8{ "active", "done", "failed" };
+/// The values of a quest's status, in `Quests.Status`'s order: `idle` until it starts.
+pub const statuses = [_][]const u8{ "idle", "active", "done", "failed" };
 
 test "a part's kind is its one mark" {
     var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);

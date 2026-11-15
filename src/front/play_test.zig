@@ -228,6 +228,43 @@ test "an error in a stage's effects is placed at the effect that met it, the Nth
     }.one, .{ .cases = 100, .seed = 0xe55, .reach = &.{"not the first"} });
 }
 
+test "a stage a quest inherits from shared rules never starts it: a quest that starts itself starts by a stage of its own" {
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var m, var out = try tools.Manuscript.build(gpa, &.{.{ .path = "q.river", .text =
+        \\facts:
+        \\  hour: int   (clock)
+        \\  met: bool   (game)
+        \\== q (quest)
+        \\  [follows night]
+        \\= seen   when { met }
+        \\  [stage]
+        \\== night (quest rules)
+        \\= shut   when { hour >= 2 }
+        \\  [fails]
+        \\  Shut.
+        \\== a
+        \\+ Wait.
+        \\  -> a
+        \\
+    }}, joined, .development);
+    defer m.deinit();
+    defer if (out) |*o| o.deinit(gpa);
+    const compiled = &(out orelse return error.TestStoryRefused);
+    var loaded: tools.walk.Loaded = undefined;
+    try loaded.init(gpa, compiled.graph, compiled.words);
+    defer loaded.deinit();
+    var p: tools.Play = undefined;
+    try p.init(gpa, &loaded, .{ .start = loaded.story.sectionNamed("a").?, .running = joined.running });
+    defer p.deinit();
+    const t: tools.transcript.Transcript = .{ .play = &p, .files = m.files, .where = &compiled.where };
+    var told: std.Io.Writer.Allocating = .init(a);
+    _ = try tools.script.run(gpa, &told.writer, &t, &p, &.{.{ .text = ":wait 2" }});
+    try std.testing.expect(std.mem.find(u8, told.written(), "! started q") == null);
+    try std.testing.expect(std.mem.find(u8, told.written(), "q.shut") == null);
+}
+
 test "a stage a quest inherits from shared rules is told as that quest's, by its name" {
     var arena: std.heap.ArenaAllocator = .init(gpa);
     defer arena.deinit();
