@@ -19,7 +19,8 @@ got, how it ended, and what the world shows because of it.
 - Played without the game by `riverrun play`, as the game runs them: a stage reached is told as it happens, with
   its journal lines and its effects, and a quest that starts itself is given a stand-in for each role.
 
-The design is [docs/design.md](docs/design.md).
+The design is [docs/design.md](docs/design.md). A writer learns quests from riverrun's manual, whose chapter on them
+is cairn's: [docs/manual/10-quests.md](docs/manual/10-quests.md).
 
 ## Install
 
@@ -36,8 +37,9 @@ cairn keeps quests as the story's facts and adds no store, save format or networ
 ## Testing
 
 `bay test` runs the unit suite: stages, roles, repeats and inherited rules; the checks on compiled stories through
-riverrun's `addStory`; a story told to each of its endings; and properties of the compiled block (a plan written
-reads back as itself, and any bytes read to a plan or are refused, a block whole or not at all).
+riverrun's `addStory`; a story told to each of its endings; properties of the compiled block (a plan written
+reads back as itself, and any bytes read to a plan or are refused, a block whole or not at all); and the
+manual's chapter, its stories checked and every run it shows pinned (`bay dev manual-test` alone).
 
 ## Stability
 

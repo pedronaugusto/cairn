@@ -1,0 +1,123 @@
+// The fair on the far bank at Hollin: an errand for Otto, a purse gone in the crowd, and parcels to carry.
+cast:
+  otto     "Otto"         — a pedlar, at his stall
+  miller   "Mrs Miller"   — from the mill, who buys on the slate
+
+facts (player):
+  carrying: set of needles, money
+  trust: int from -3 to 3   // what Otto makes of you
+facts:
+  hour: int   (clock)                // the fair's clock: the game moves it on
+  took_needles: bool
+  needles_lost: bool
+  miller_paid: bool
+  purse_gone: bool
+  caught(person): bool   (game)      // the watch has hold of them
+  handed(person): bool   (game)      // the player has given them a parcel
+  went_home(person): bool   (game)   // they have left the fair
+
+extern:
+  name(who: ref of person) -> text
+
+const:
+  shuts_at = 22
+
+== errand (quest)
+  [title "Needles for the mill"] [scope player]
+= taken        when { took_needles }
+  [stage] [active mill_marked]
+  Otto gave you a card of needles for Mrs Miller at the mill, and wants what she owes him.
+= delivered    when { taken and carrying hasnt needles and not needles_lost }
+  [objective] [after taken]
+  You left the needles at the mill.
+= paid         when { miller_paid }
+  [objective] [after delivered]
+  Mrs Miller paid what she owed.
+= done         when { delivered and paid and carrying hasnt money }
+  [outcome] [after paid]
+  [trust += 1]
+  Otto has his money, and calls you a friend.
+= lost         when { needles_lost }
+  [fails]
+  Otto's needles went into the mud, and the pig after them.
+
+== cutpurse (quest)
+  [title "A light hand"] [scope player]
+facts (player):
+  thief: ref of person   (role)      // someone in the crowd: the game says who
+= robbed       when { purse_gone }
+  [stage] [active watch_out]
+  Somebody in the crowd has had your purse.
+= got_back     when { caught(thief) }
+  [outcome] [after robbed]
+  The watch has {name(thief)}, and you have your purse.
+= away         when { hour >= shuts_at and not caught(thief) }
+  [fails]
+  The fair has shut, and whoever it was has gone with it.
+
+== parcel (quest)
+  [repeat] [title "A parcel to carry"] [scope player]
+facts (player):
+  to: ref of person   (role)         // who it is for: the game says, each time
+= given        when { true }
+  [stage] [active parcel_marked]
+  A parcel from Otto's stall, for {name(to)}.
+= handed_over  when { handed(to) }
+  [outcome] [after given]
+  [trust += 1]
+  The parcel is with {name(to)}.
+= late         when { since(given, hour) > 2 and not handed(to) }
+  [fails]
+  Nobody came for the parcel. Otto has it back.
+
+// how a quest to find someone at the fair fails: every quest with a `to` has it
+== errands (quest rules)
+facts (player):
+  to: ref of person   (role)
+= gone_home    when { went_home(to) and not handed(to) }
+  [fails]
+  Too late: {name(to)} has gone home.
+
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+-> stall
+
+== stall
+OTTO: Needles, thread, buttons!
+{ errand.done } OTTO: There's my friend.
+- (ask)
+* Ask if he needs anything.
+  OTTO: Mrs Miller at the mill. A card of needles, and the three she owes me.
+  [took_needles = true] [carrying += needles]
+  -> ask
+* { carrying has money } Give him Mrs Miller's money.
+  [carrying -= money]
+  OTTO: Every penny. Who'd have thought it.
+  -> ask
+* Go after the pig.
+  The pig gets away through the crowd. So does whoever had a hand in your coat.
+  [purse_gone = true]
+  { carrying has needles }
+    And Otto's needles are somewhere in the mud.
+    [carrying -= needles] [needles_lost = true]
+  -> ask
++ Walk up to the mill.
+  -> mill
+* Go back to the ferry.
+  -> end
+
+== mill
+A door in the dark, and flour on the step.
+MILLER: Who's that, at this hour?
+{ handed(miller) } MILLER: Oh, it's you. Thank you for the parcel.
+- (door)
+* { carrying has needles } Hand her the needles.
+  [carrying -= needles]
+  MILLER: From Otto. And he'll want paying, I suppose.
+  -> door
+* { errand.delivered and not miller_paid } Ask for what she owes Otto.
+  [miller_paid = true] [carrying += money]
+  MILLER: Three. Tell him not to spend it all at once.
+  -> door
++ Go back down to the fair.
+  -> stall

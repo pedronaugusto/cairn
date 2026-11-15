@@ -1,0 +1,103 @@
+> :set name(miller) = "Mrs Miller"
+> :start parcel to=miller
+! roles cutpurse
+  thief = thief, standing in for the game's
+== fair
+! started parcel(1)
+! reached parcel(1).given
+  A parcel from Otto's stall, for Mrs Miller.
+  ? name(miller) = "Mrs Miller"
+! active parcel_marked for parcel(1)
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :start parcel to=pip
+! started parcel(2)
+! reached parcel(2).given
+  A parcel from Otto's stall, for .
+  ? name(pip) = "" (not set)
+! active parcel_marked for parcel(2)
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :set name(pip) = "Pip"
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :start parcel to=ada
+! started parcel(3)
+! reached parcel(3).given
+  A parcel from Otto's stall, for .
+  ? name(ada) = "" (not set)
+! active parcel_marked for parcel(3)
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :set name(ada) = "Ada"
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :set handed(miller) = true
+! reached parcel(1).handed_over
+  The parcel is with Mrs Miller.
+  [trust += 1]
+  ? name(miller) = "Mrs Miller"
+! ended parcel(1).handed_over
+! inactive parcel_marked for parcel(1)
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> 4
+== mill
+A door in the dark, and flour on the step.
+MILLER: Who's that, at this hour?
+MILLER: Oh, it's you. Thank you for the parcel.
+* 1 (closed) Hand her the needles.
+* 2 (closed) Ask for what she owes Otto.
+* 3 Go back down to the fair.
+> 3
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :set went_home(pip) = true
+! reached parcel(2).gone_home
+  Too late: Pip has gone home.
+  ? name(pip) = "Pip"
+! failed parcel(2).gone_home
+! inactive parcel_marked for parcel(2)
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :wait 3
+! reached parcel(3).late
+  Nobody came for the parcel. Otto has it back.
+! failed parcel(3).late
+! inactive parcel_marked for parcel(3)
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> 5
+-> end

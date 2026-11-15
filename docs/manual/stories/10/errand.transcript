@@ -1,0 +1,72 @@
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> 1
+OTTO: Mrs Miller at the mill. A card of needles, and the three she owes me.
+[took_needles = true] [carrying += needles]
+! started errand
+! reached errand.taken
+  Otto gave you a card of needles for Mrs Miller at the mill, and wants what she owes him.
+! active mill_marked for errand
+* 1 (closed) Give him Mrs Miller's money.
+* 2 Go after the pig.
+* 3 Walk up to the mill.
+* 4 Go back to the ferry.
+> 3
+== mill
+A door in the dark, and flour on the step.
+MILLER: Who's that, at this hour?
+* 1 Hand her the needles.
+* 2 (closed) Ask for what she owes Otto.
+* 3 Go back down to the fair.
+> 1
+[carrying -= needles]
+! reached errand.delivered
+  You left the needles at the mill.
+! inactive mill_marked for errand
+MILLER: From Otto. And he'll want paying, I suppose.
+* 1 Ask for what she owes Otto.
+* 2 Go back down to the fair.
+> 1
+[miller_paid = true] [carrying += money]
+! reached errand.paid
+  Mrs Miller paid what she owed.
+MILLER: Three. Tell him not to spend it all at once.
+* 1 Go back down to the fair.
+> 1
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Give him Mrs Miller's money.
+* 2 Go after the pig.
+* 3 Walk up to the mill.
+* 4 Go back to the ferry.
+> 1
+[carrying -= money]
+! reached errand.done
+  Otto has his money, and calls you a friend.
+  [trust += 1]
+! ended errand.done
+OTTO: Every penny. Who'd have thought it.
+* 1 Go after the pig.
+* 2 Walk up to the mill.
+* 3 Go back to the ferry.
+> 2
+== mill
+A door in the dark, and flour on the step.
+MILLER: Who's that, at this hour?
+* 1 Go back down to the fair.
+> 1
+== stall
+OTTO: Needles, thread, buttons!
+OTTO: There's my friend.
+* 1 Go after the pig.
+* 2 Walk up to the mill.
+* 3 Go back to the ferry.
+> 3
+-> end

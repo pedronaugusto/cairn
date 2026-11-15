@@ -70,6 +70,7 @@ pub fn dev(b: *std.Build, tools: type) void {
     test_step.dependOn(&b.addRunArtifact(front_tests).step);
     test_step.dependOn(&b.addRunArtifact(storyTests(b, package, filters) orelse return).step);
     docs(b, test_step) orelse return;
+    manualTests(b, test_step) orelse return;
     tools.preflight.addCi(b, package.builder, .{
         .tests = test_step,
         .bench = .{
@@ -219,6 +220,60 @@ fn docs(b: *std.Build, test_step: *std.Build.Step) ?void {
     board.expectStdOutEqual(board_played);
     test_step.dependOn(&board.step);
     const excerpts = riverrun.addExcerptsTest(b, river, .{ .package = package.builder, .stories = &documented.stories, .documents = &documented.documents }) orelse return null;
+    test_step.dependOn(&b.addRunArtifact(excerpts).step);
+}
+
+/// The chapter of riverrun's manual that is cairn's, quests: the stories it shows, the runs of the program it shows
+/// and the stories the checker refuses in them, kept as riverrun's manual keeps its chapters (its README, "How this
+/// manual is kept"). Every story under `stories/` checks and prints nothing.
+const manual = struct {
+    const vocabulary = "docs/manual/stories/vocabulary.zig";
+    const documents = [_][]const u8{"docs/manual/10-quests.md"};
+    const stories = [_][]const u8{ "docs/manual/stories/10/errand.river", "docs/manual/stories/10/fair.river" };
+    const runs = [_]riverrun.ShownRun{
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "-i", "1", "-i", "3", "-i", "1", "-i", "1", "-i", "1", "-i", "1", "-i", "2", "-i", "1", "-i", "3", "errand.river" }, .output = "errand.transcript" },
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "-i", "1", "-i", "2", "-i", "3", "errand.river" }, .output = "lost.transcript" },
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "-i", ":bind cutpurse thief=pip", "-i", ":facts cutpurse.thief", "-i", ":set name(pip) = \"Pip\"", "-i", "3", "-i", ":set caught(pip) = true", "-i", "4", "fair.river" }, .output = "cutpurse.transcript" },
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "-i", ":help", "fair.river" }, .output = "help.transcript", .status = 3 },
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "-i", ":start parcel", "fair.river" }, .output = "refused.transcript", .status = 1 },
+        .{ .dir = "docs/manual/stories/10", .args = &.{ "play", "--set", "name(miller) = \"Mrs Miller\"", "--call", "start parcel to=miller", "--script", "fair.play", "fair.river" }, .output = "fair.transcript" },
+        .{ .dir = "docs/manual/mistakes/10", .args = &.{ "check", "fair.river" }, .output = "fair.diagnostics", .status = 1 },
+        .{ .dir = "docs/manual/mistakes/10/ends", .args = &.{ "check", "fair.river" }, .output = "fair.diagnostics", .status = 1 },
+    };
+};
+
+// The manual's stories checked, each printing nothing; its runs pinned; what its chapter shows held to them: in the
+// test step, and alone in `manual-test`. `bay manual` installs the program its stories are written for.
+fn manualTests(b: *std.Build, tests: *std.Build.Step) ?void {
+    const package = b.dependency("cairn", riverrun.building(b));
+    const river = b.dependency("riverrun", riverrun.building(b));
+    const program = riverrun.addProgram(b, river, .{
+        .vocabulary = package.path(manual.vocabulary),
+        .packages = &.{.{ .name = "cairn-compiler", .module = compiler(package) orelse return null }},
+    });
+    b.step("manual", "The riverrun program the manual's stories are written for, into zig-out/bin").dependOn(&b.addInstallArtifact(program, .{}).step);
+    const test_step = b.step("manual-test", "The manual's stories checked, its runs pinned, and what its chapter shows held to them");
+    tests.dependOn(test_step);
+    for (manual.stories) |story| {
+        const clean = riverrun.addCheck(b, program, &.{package.path(story)}, .{});
+        clean.expectStdOutEqual("");
+        test_step.dependOn(&clean.step);
+    }
+    riverrun.addShownRuns(b, test_step, program, package.builder, &manual.runs);
+    // a story the chapter shows the checker warn about checks too, and a ```river block may show it
+    var checked: std.ArrayList([]const u8) = .empty;
+    checked.appendSlice(b.allocator, &manual.stories) catch @panic("OOM");
+    for (manual.runs) |r| if (r.status == 0 and std.mem.eql(u8, r.args[0], "check")) for (r.args[1..]) |a| {
+        if (std.mem.endsWith(u8, a, ".river")) checked.append(b.allocator, b.pathJoin(&.{ r.dir, a })) catch @panic("OOM");
+    };
+    const excerpts = riverrun.addExcerptsTest(b, river, .{
+        .package = package.builder,
+        .stories = checked.items,
+        .documents = &manual.documents,
+        .runs = &manual.runs,
+        .sources = &.{manual.vocabulary},
+        .every = true,
+    }) orelse return null;
     test_step.dependOn(&b.addRunArtifact(excerpts).step);
 }
 

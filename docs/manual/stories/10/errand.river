@@ -1,0 +1,73 @@
+// The fair on the far bank at Hollin, and an errand Otto has for the player.
+cast:
+  otto     "Otto"         — a pedlar, at his stall
+  miller   "Mrs Miller"   — from the mill, who buys on the slate
+
+facts (player):
+  carrying: set of needles, money
+  trust: int from -3 to 3   // what Otto makes of you
+facts:
+  took_needles: bool
+  needles_lost: bool
+  miller_paid: bool
+
+== errand (quest)
+  [title "Needles for the mill"] [scope player]
+= taken        when { took_needles }
+  [stage] [active mill_marked]
+  Otto gave you a card of needles for Mrs Miller at the mill, and wants what she owes him.
+= delivered    when { taken and carrying hasnt needles and not needles_lost }
+  [objective] [after taken]
+  You left the needles at the mill.
+= paid         when { miller_paid }
+  [objective] [after delivered]
+  Mrs Miller paid what she owed.
+= done         when { delivered and paid and carrying hasnt money }
+  [outcome] [after paid]
+  [trust += 1]
+  Otto has his money, and calls you a friend.
+= lost         when { needles_lost and not delivered }
+  [fails]
+  Otto's needles went into the mud, and the pig after them.
+
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+-> stall
+
+== stall
+OTTO: Needles, thread, buttons!
+{ errand.done } OTTO: There's my friend.
+- (ask)
+* Ask if he needs anything.
+  OTTO: Mrs Miller at the mill. A card of needles, and the three she owes me.
+  [took_needles = true] [carrying += needles]
+  -> ask
+* { carrying has money } Give him Mrs Miller's money.
+  [carrying -= money]
+  OTTO: Every penny. Who'd have thought it.
+  -> ask
+* Go after the pig.
+  The pig gets away through the crowd.
+  { carrying has needles }
+    And Otto's needles are somewhere in the mud.
+    [carrying -= needles] [needles_lost = true]
+  -> ask
++ Walk up to the mill.
+  -> mill
+* Go back to the ferry.
+  -> end
+
+== mill
+A door in the dark, and flour on the step.
+MILLER: Who's that, at this hour?
+- (door)
+* { carrying has needles } Hand her the needles.
+  [carrying -= needles]
+  MILLER: From Otto. And he'll want paying, I suppose.
+  -> door
+* { errand.delivered and not miller_paid } Ask for what she owes Otto.
+  [miller_paid = true] [carrying += money]
+  MILLER: Three. Tell him not to spend it all at once.
+  -> door
++ Go back down to the fair.
+  -> stall

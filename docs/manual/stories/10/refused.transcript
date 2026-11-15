@@ -1,0 +1,12 @@
+! roles cutpurse
+  thief = thief, standing in for the game's
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+riverrun: error: the input `:start parcel`: :start parcel takes to=PERSON: `to` is missing

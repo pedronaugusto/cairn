@@ -1,0 +1,13 @@
+// Otto hands the player two more parcels: one for Pip, whom the story never names, one of the game's own people
+:start parcel to=pip
+:set name(pip) = "Pip"
+:start parcel to=ada
+:set name(ada) = "Ada"
+// Mrs Miller comes by the stall for hers, and the game sees the player give it her; then up to the mill and back
+:set handed(miller) = true
+4
+3
+// the game says Pip has gone home; then three hours go by, and nobody comes for Ada's
+:set went_home(pip) = true
+:wait 3
+5

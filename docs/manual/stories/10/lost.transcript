@@ -1,0 +1,33 @@
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> 1
+OTTO: Mrs Miller at the mill. A card of needles, and the three she owes me.
+[took_needles = true] [carrying += needles]
+! started errand
+! reached errand.taken
+  Otto gave you a card of needles for Mrs Miller at the mill, and wants what she owes him.
+! active mill_marked for errand
+* 1 (closed) Give him Mrs Miller's money.
+* 2 Go after the pig.
+* 3 Walk up to the mill.
+* 4 Go back to the ferry.
+> 2
+The pig gets away through the crowd.
+And Otto's needles are somewhere in the mud.
+[carrying -= needles] [needles_lost = true]
+! reached errand.lost
+  Otto's needles went into the mud, and the pig after them.
+! failed errand.lost
+! inactive mill_marked for errand
+* 1 (closed) Give him Mrs Miller's money.
+* 2 Walk up to the mill.
+* 3 Go back to the ferry.
+> 3
+-> end

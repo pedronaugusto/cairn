@@ -1,0 +1,28 @@
+! roles cutpurse
+  thief = thief, standing in for the game's
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :help
+  N                         take the choice numbered N
+  VALUE                     the outcome an action waits for: true, 3, a value of its list, a thing, "words"
+  :set FACT = VALUE         set a fact; += and -= add to a set or an int, or take from it
+  :set FACT(KEY) = VALUE    a fact kept per thing, for one thing
+  :set QUERY(ARGS) = VALUE  what the game answers a query with, from now on
+  :wait N [CLOCK]           move a clock on N
+  :facts [FACT ...]         the facts not at the value they start at, or those named
+  :back                     back one input
+  :restart                  from the start again
+  :quit                     stop playing
+  :start QUEST              the game starts a quest, its roles given (a repeat quest's next instance) (cairn)
+      :start errand
+      :start cutpurse thief=PERSON
+      :start parcel to=PERSON
+  :bind QUEST               the game gives a quest that starts itself its roles, before it starts (cairn)
+      :bind cutpurse thief=PERSON

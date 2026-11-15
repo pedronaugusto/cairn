@@ -1,0 +1,49 @@
+! roles cutpurse
+  thief = thief, standing in for the game's
+== fair
+Lamps on poles, mud underfoot, and somebody's pig loose among the stalls.
+== stall
+OTTO: Needles, thread, buttons!
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :bind cutpurse thief=pip
+! roles cutpurse
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> :facts cutpurse.thief
+  cutpurse.thief = pip
+> :set name(pip) = "Pip"
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Go after the pig.
+* 4 Walk up to the mill.
+* 5 Go back to the ferry.
+> 3
+The pig gets away through the crowd. So does whoever had a hand in your coat.
+[purse_gone = true]
+! started cutpurse
+! reached cutpurse.robbed
+  Somebody in the crowd has had your purse.
+! active watch_out for cutpurse
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Walk up to the mill.
+* 4 Go back to the ferry.
+> :set caught(pip) = true
+! reached cutpurse.got_back
+  The watch has Pip, and you have your purse.
+  ? name(pip) = "Pip"
+! ended cutpurse.got_back
+! inactive watch_out for cutpurse
+* 1 Ask if he needs anything.
+* 2 (closed) Give him Mrs Miller's money.
+* 3 Walk up to the mill.
+* 4 Go back to the ferry.
+> 4
+-> end
