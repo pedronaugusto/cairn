@@ -346,6 +346,7 @@ OTTO: Needles, thread, buttons!
 * 5 Go back to the ferry.
 > :bind cutpurse thief=pip
 ! roles cutpurse
+  thief = pip
 * 1 Ask if he needs anything.
 * 2 (closed) Give him Mrs Miller's money.
 * 3 Go after the pig.
@@ -387,7 +388,7 @@ The pig gets away through the crowd. So does whoever had a hand in your coat.
 `! roles cutpurse` before the story starts is the stand-in: the thief is `thief`, nobody the game knows.
 `:bind cutpurse thief=pip` gives the role `pip`, a person the story never names: a thing named in a command that the
 story does not name is one of the game's, and the play stands in for it. The quest's news says it has its roles
-again, `! roles cutpurse`, and `:facts cutpurse.thief` shows whom the role holds. From then on `pip` is a thing like
+again, `! roles cutpurse` with `thief = pip` under it, and `:facts cutpurse.thief` shows the same. From then on `pip` is a thing like
 any other: `:set name(pip) = "Pip"` answers the query for them, and `:set caught(pip) = true` is the watch catching
 them. Once a quest has started its roles are given, and `:bind` is refused.
 

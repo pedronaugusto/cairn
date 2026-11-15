@@ -200,7 +200,8 @@ which `:help` lists with each quest of the story and its roles:
   time (`! started bounty(2)`). Refused where the quest is not there, a role is missing, given none or a thing of
   another kind, or a quest that runs once has started (`delivery` has started already).
 - `:bind QUEST ROLE=THING…` is the game's `bind`, for a quest that starts itself and has roles: its roles given
-  before it starts (in place of the stand-ins), refused once it has started.
+  before it starts (in place of the stand-ins), refused once it has started; its news, `! roles QUEST`, names whom
+  each role now holds (`thief = pip`), by the name the play knows each thing by (`Running.StandIn.name`).
 
 ```
 > :start bounty target=wolf

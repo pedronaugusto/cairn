@@ -33,13 +33,15 @@ const State = struct {
     quests: cairn.Quests,
     story: *const story.Story,
     words: *const story.Strings,
+    /// How the play names the things it gives: a role's news says whom each role holds.
+    stand_in: river.Running.StandIn,
 };
 
 fn start(gpa: std.mem.Allocator, game: river.Running.Game, told: *river.Running.Told) error{ OutOfMemory, Stopped }!?*anyopaque {
     if (game.story.block(cairn.block.name) == null) return null;
     const st = try gpa.create(State);
     errdefer gpa.destroy(st);
-    st.* = .{ .quests = undefined, .story = game.story, .words = game.words };
+    st.* = .{ .quests = undefined, .story = game.story, .words = game.words, .stand_in = game.stand_in };
     st.quests = cairn.Quests.init(gpa, game.story, game.store, game.host, game.owners, .{}) catch |e| switch (e) {
         error.OutOfMemory => return error.OutOfMemory,
         else => return told.stop("cairn could not load the story's quests ({t}): this is cairn's fault, not the story's", .{e}),
@@ -179,7 +181,16 @@ fn bindQuest(state: *anyopaque, form: usize, args: []const facts.Value, told: *r
         error.WrongRoles => return told.refuse("`{s}` takes its roles each a thing of its kind", .{questName(st, q)}),
         else => return told.stop("cairn could not give `{s}` its roles ({t})", .{ questName(st, q), e }),
     };
-    try told.say(.{ .what = "roles", .name = questName(st, q) });
+    // whom each role now holds, by the name the play knows it by
+    const p = st.quests.quests()[q.raw()];
+    const words = try told.arena.alloc([]const u8, p.roles.len);
+    for (words, p.roles, args) |*w, f, v| {
+        const d = st.story.fact(.fromRaw(f));
+        const kind = if (d.ref_kind) |k| st.story.refKind(k) else "";
+        const whom = if (v == .ref) st.stand_in.name(st.stand_in.ctx, kind, v.ref) orelse "a thing of the game's" else "a value";
+        w.* = try told.arena.print("{s} = {s}", .{ shortName(d.name), whom });
+    }
+    try told.say(.{ .what = "roles", .name = questName(st, q), .words = words });
 }
 
 // A role is a thing the game gives: none is no role.

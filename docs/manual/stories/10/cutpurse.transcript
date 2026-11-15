@@ -11,6 +11,7 @@ OTTO: Needles, thread, buttons!
 * 5 Go back to the ferry.
 > :bind cutpurse thief=pip
 ! roles cutpurse
+  thief = pip
 * 1 Ask if he needs anything.
 * 2 (closed) Give him Mrs Miller's money.
 * 3 Go after the pig.
