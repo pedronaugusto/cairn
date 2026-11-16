@@ -131,6 +131,7 @@ const Reader = struct {
         for (try written.inherited(r.a, r.checked.files, s.node)) |h| if (try r.inherit(id, roles, h)) |st| try stages.append(r.a, st);
         if (stages.items.len > block.max_stages) try r.problem(s.node.name.span, "`{s}` has {d} stages, more than {d}", .{ s.name, stages.items.len, block.max_stages });
         if (stages.items.len > block.max_stages) stages.shrinkRetainingCapacity(block.max_stages);
+        try r.keysBound(s, stages.items);
         try r.afters(s, stages.items);
         const ends = for (stages.items) |st| {
             if (st.kind.ends()) break true;
@@ -260,6 +261,23 @@ const Reader = struct {
     }
 
     // Each stage's `after`, by the stages' places in the quest, and no `after` that comes round to itself.
+    // A quest names at most max_keys keys in its stages' `active` and `keeps` together, which is what the runtime
+    // holds for a run; the stage that brings one more is told, and its lists end before it.
+    fn keysBound(r: *Reader, s: sym.Section, stages: []Stage) error{OutOfMemory}!void {
+        var seen: std.ArrayList([]const u8) = .empty;
+        for (stages) |*st| for ([_]*[]const []const u8{ &st.active, &st.keeps }) |list| for (list.*, 0..) |name, k| {
+            if (for (seen.items) |x| {
+                if (std.mem.eql(u8, x, name)) break true;
+            } else false) continue;
+            if (seen.items.len == block.max_keys) {
+                try r.problem(st.node.name.span, "`{s}` names more than {d} keys in its stages' `active` and `keeps`", .{ s.name, block.max_keys });
+                list.* = list.*[0..k];
+                return;
+            }
+            try seen.append(r.a, name);
+        };
+    }
+
     fn afters(r: *Reader, s: sym.Section, stages: []Stage) error{OutOfMemory}!void {
         for (stages) |*st| {
             const t = written.tagOf(st.node.tags, "after") orelse continue;

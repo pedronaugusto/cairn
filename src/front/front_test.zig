@@ -10,6 +10,7 @@ const cairn = @import("cairn");
 const vocabulary = @import("vocabulary.zig");
 const shakedown = @import("shakedown");
 const tools = @import("riverrun-tools");
+const block = cairn.block;
 
 const gpa = std.testing.allocator;
 const check = riverrun.check;
@@ -186,10 +187,17 @@ test "any quest's `after` is refused when it comes round, and only then" {
             };
             if (named) |at| {
                 // the stage it names is on a cycle: it comes after itself
-                try std.testing.expect(reaches(after, at, at, try a.alloc(bool, n)));
+                try std.testing.expect(reaches(after, at, at, try unseen(a, n)));
             } else {
-                for (0..n) |k| try std.testing.expect(!reaches(after, k, k, try a.alloc(bool, n)));
+                for (0..n) |k| try std.testing.expect(!reaches(after, k, k, try unseen(a, n)));
             }
+        }
+
+        // `n` stages none of which is seen yet: allocated memory is undefined, so it is cleared here.
+        fn unseen(a: std.mem.Allocator, n: usize) ![]bool {
+            const seen = try a.alloc(bool, n);
+            @memset(seen, false);
+            return seen;
         }
 
         // Whether `to` comes after `from` by one `after` or more, `seen` all false at first.
@@ -327,6 +335,42 @@ test "activation keys are the host's, and `follows` names shared rules" {
     try b.has(.err, 6, 28, "the game has no activation key `spwan`");
     try b.has(.err, 4, 12, "`a` is not `(quest rules)`");
     try b.has(.err, 4, 15, "`nobody` is not a section");
+}
+
+/// A vocabulary with one more activation key than a quest may name: `k0` to `k64`.
+const ManyKeys = struct {
+    const ids = blk: {
+        @setEvalBranchQuota(100_000);
+        var out: [block.max_keys + 1][]const u8 = undefined;
+        for (&out, 0..) |*o, i| o.* = std.fmt.comptimePrint("k{d}", .{i});
+        const final = out;
+        break :blk &final;
+    };
+    pub const options: check.Options = .{ .things = &.{.{ .kind = "activation", .ids = ids }} };
+    pub const packages: []const riverrun.Package = &.{vocabulary.package};
+};
+
+// A quest of two stages: `a` activating keys 0 to 39, `b` keeping 30 to `last`.
+fn twoStages(a: std.mem.Allocator, last: usize) ![]const u8 {
+    var w: std.Io.Writer.Allocating = .init(a);
+    try w.writer.writeAll("facts:\n  met: bool   (game)\n== q (quest)\n= a   when { met }\n  [stage] [active");
+    for (0..40) |i| try w.writer.print("{s}k{d}", .{ if (i == 0) " " else ", ", i });
+    try w.writer.writeAll("]\n= b   when { met }\n  [outcome] [after a] [keeps");
+    for (30..last + 1) |i| try w.writer.print("{s}k{d}", .{ if (i == 30) " " else ", ", i });
+    try w.writer.writeAll("]\n");
+    return w.written();
+}
+
+test "a quest names at most max_keys keys in its stages' `active` and `keeps`, each counted once" {
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    // k30 to k39 are named twice: 64 keys in all, which a quest may name
+    var fits = try buildWith(riverrun.join(ManyKeys), try twoStages(arena.allocator(), 63));
+    defer fits.deinit();
+    try std.testing.expectEqual(@as(usize, 0), fits.diags.errors());
+    var over = try buildWith(riverrun.join(ManyKeys), try twoStages(arena.allocator(), 64));
+    defer over.deinit();
+    try over.only(.err, 6, 3, std.fmt.comptimePrint("`q` names more than {d} keys in its stages' `active` and `keeps`", .{block.max_keys}));
 }
 
 test "a quest's facts are kept in the scope its stages are" {

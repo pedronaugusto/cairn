@@ -29,7 +29,7 @@ pub const max_stages = 256;
 pub const max_roles = 16;
 /// The most quests a story holds.
 pub const max_quests = 1 << 20;
-/// The most keys one stage activates.
+/// The most keys one quest names, in its stages' `active` and `keeps` together: what a run can keep active.
 pub const max_keys = 64;
 /// The most builtin calls a story makes.
 pub const max_calls = 1 << 20;
@@ -187,6 +187,7 @@ const Writer = struct {
         try w.int(u8, @backingInt(s.kind));
         try w.int(u8, @as(u8, @intFromBool(s.live)) | (@as(u8, @intFromBool(s.optional)) << 1) | (@as(u8, @intFromBool(s.inherited)) << 2));
         try w.list(u8, s.after);
+        aegis.assert.invariant(s.active.len <= max_keys and s.keeps.len <= max_keys, "a stage names at most max_keys keys, as the compiler builds it");
         try w.list(u32, s.active);
         try w.list(u32, s.keeps);
         aegis.assert.invariant(s.roles.len <= max_roles, "a stage names at most max_roles roles");
@@ -285,6 +286,7 @@ const Reader = struct {
         const stages = try arena.alloc(Stage, try r.count(u16, max_stages, stage_bytes));
         for (stages) |*s| s.* = try r.stage(arena, roles.len);
         for (stages) |s| for (s.after) |a| if (a >= stages.len) return error.Malformed;
+        if (keysOver(stages)) return error.Malformed;
         q.roles = roles;
         q.stages = stages;
         return q;
@@ -308,6 +310,19 @@ const Reader = struct {
         }
         s.roles = reads;
         return s;
+    }
+
+    // Whether a quest's stages name more than max_keys keys in `active` and `keeps` together.
+    fn keysOver(stages: []const Stage) bool {
+        var seen: [max_keys]u32 = undefined;
+        var n: usize = 0;
+        for (stages) |st| for ([_][]const u32{ st.active, st.keeps }) |keys| for (keys) |key| {
+            if (std.mem.findScalar(u32, seen[0..n], key) != null) continue;
+            if (n == max_keys) return true;
+            seen[n] = key;
+            n += 1;
+        };
+        return false;
     }
 
     fn list(r: *Reader, arena: std.mem.Allocator, comptime T: type, bound: usize) Error![]const T {

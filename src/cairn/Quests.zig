@@ -16,6 +16,7 @@
 //! does (its effects) is emitted, never applied, and seen at the next step.
 
 const std = @import("std");
+const aegis = @import("aegis");
 const riverrun = @import("riverrun");
 const block = @import("block.zig");
 const load_ = @import("load.zig");
@@ -579,7 +580,7 @@ fn round(q: *Quests, evaluated: []const react.Evaluated) Error!bool {
 fn apply(q: *Quests, r: u32, changes: []const Change) Error!void {
     const i = q.instanceOf(r);
     const p = q.plan(i.quest);
-    var was: [block.max_keys * 2]u32 = undefined;
+    var was: [block.max_keys]u32 = undefined;
     const before = q.keysOf(r, &was);
     if (q.runs.items[r].status == .idle) {
         try q.writeFact(p.status, i.key, statusValue(.active));
@@ -702,26 +703,28 @@ fn context(q: *Quests, a: std.mem.Allocator, r: u32, st: block.Stage) Error!run.
 
 // ---------------------------------------------------------------- the active set
 
-// The keys a run keeps active now: its current stage's `active`, and the `keeps` of every stage it reached.
-fn keysOf(q: *const Quests, r: u32, out: []u32) []u32 {
+// The keys a run keeps active now, each once: its current stage's `active`, and the `keeps` of every stage it
+// reached. A quest names at most max_keys keys (the block's reader holds every plan to it), so `out` holds them all.
+fn keysOf(q: *const Quests, r: u32, out: *[block.max_keys]u32) []u32 {
     const i = q.instanceOf(r);
     if (q.status(i) != .active) return out[0..0];
     const p = q.plan(i.quest);
     var n: usize = 0;
-    if (q.current(i)) |c| for (p.stages[c.raw()].active) |t| {
-        if (n < out.len) out[n] = t;
-        n += 1;
-    };
-    for (p.stages, 0..) |st, k| if (st.keeps.len > 0 and q.reached(i, .fromRaw(@intCast(k)))) for (st.keeps) |t| { // safe: at most max_stages
-        if (n < out.len) out[n] = t;
-        n += 1;
-    };
-    return out[0..@min(n, out.len)];
+    if (q.current(i)) |c| for (p.stages[c.raw()].active) |t| add(out, &n, t);
+    for (p.stages, 0..) |st, k| if (st.keeps.len > 0 and q.reached(i, .fromRaw(@intCast(k)))) for (st.keeps) |t| add(out, &n, t); // safe: at most max_stages
+    return out[0..n];
+}
+
+fn add(out: *[block.max_keys]u32, n: *usize, key: u32) void {
+    if (std.mem.findScalar(u32, out[0..n.*], key) != null) return;
+    aegis.assert.invariant(n.* < out.len, "a quest names at most max_keys keys: the block's reader refuses more");
+    out[n.*] = key;
+    n.* += 1;
 }
 
 // The run's keys now against what they were (none where `before` is null), the active set and the events told.
 fn activate(q: *Quests, r: u32, before: ?[]const u32) Error!void {
-    var buf: [block.max_keys * 2]u32 = undefined;
+    var buf: [block.max_keys]u32 = undefined;
     const now = q.keysOf(r, &buf);
     const i = q.instanceOf(r);
     const old = before orelse &.{};
